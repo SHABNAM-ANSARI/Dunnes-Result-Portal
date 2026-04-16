@@ -1,30 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import DunnesHeader from "./DunnesHeader";
 import signature from "@/assets/principal-signature.png";
+import { STUDENTS_BY_CLASS, ACADEMIC_SUBJECTS, getTeacherForClass } from "@/data/schoolData";
 
 interface Student {
-  rollNo: number;
+  grNo: string;
   name: string;
+  rollNo: string;
   marks: Record<string, number>;
 }
 
 interface MarksheetEntryProps {
   selectedClass: string;
+  selectedTerm: string;
 }
-
-const SUBJECTS_MAP: Record<string, string[]> = {
-  "Class 1": ["English", "Hindi", "Marathi", "Maths", "EVS"],
-  "Class 2": ["English", "Hindi", "Marathi", "Maths", "EVS"],
-  default: ["English", "Hindi", "Marathi", "Maths", "Science", "Social Studies", "Computer"],
-};
-
-const SAMPLE_STUDENTS: Student[] = [
-  { rollNo: 101, name: "Aarav Sharma", marks: {} },
-  { rollNo: 102, name: "Priya Deshmukh", marks: {} },
-  { rollNo: 103, name: "Rohan Patel", marks: {} },
-  { rollNo: 104, name: "Sneha Kulkarni", marks: {} },
-  { rollNo: 105, name: "Vikram Joshi", marks: {} },
-];
 
 const getGrade = (percentage: number): string => {
   if (percentage >= 90) return "A+";
@@ -36,21 +25,27 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
-const MarksheetEntry = ({ selectedClass }: MarksheetEntryProps) => {
-  const subjects = SUBJECTS_MAP[selectedClass] || SUBJECTS_MAP.default;
+const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) => {
+  const subjects = ACADEMIC_SUBJECTS[selectedClass] || ACADEMIC_SUBJECTS["Class 1"];
   const maxMarks = 100;
+  const classTeacher = getTeacherForClass(selectedClass);
 
-  const [students, setStudents] = useState<Student[]>(
-    SAMPLE_STUDENTS.map((s) => ({
-      ...s,
+  const initialStudents = useMemo(() => {
+    const csvStudents = STUDENTS_BY_CLASS[selectedClass] || [];
+    return csvStudents.map((s, idx) => ({
+      grNo: s.grNo,
+      name: s.name,
+      rollNo: s.rollNo || String(idx + 1),
       marks: Object.fromEntries(subjects.map((sub) => [sub, 0])),
-    }))
-  );
+    }));
+  }, [selectedClass]);
 
-  const updateMark = (rollNo: number, subject: string, value: number) => {
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+
+  const updateMark = (grNo: string, subject: string, value: number) => {
     setStudents((prev) =>
       prev.map((s) =>
-        s.rollNo === rollNo
+        s.grNo === grNo
           ? { ...s, marks: { ...s.marks, [subject]: Math.min(maxMarks, Math.max(0, value)) } }
           : s
       )
@@ -61,24 +56,31 @@ const MarksheetEntry = ({ selectedClass }: MarksheetEntryProps) => {
     Object.values(marks).reduce((a, b) => a + b, 0);
 
   const getPercentage = (marks: Record<string, number>) =>
-    getTotal(marks) / (subjects.length * maxMarks) * 100;
+    (getTotal(marks) / (subjects.length * maxMarks)) * 100;
 
   return (
     <div className="mt-10 report-card p-8 shadow-2xl rounded-xl print:shadow-none">
       <DunnesHeader />
       <div className="flex justify-between mb-4 font-bold text-sm text-primary">
         <span>CLASS: {selectedClass}</span>
-        <span>TERM: Annual Examination</span>
-        <span>MAX MARKS: {maxMarks} per subject</span>
+        <span>TERM: {selectedTerm}</span>
+        <span>STUDENTS: {students.length}</span>
+        <span>MAX MARKS: {maxMarks}/subject</span>
       </div>
+      {classTeacher && (
+        <div className="mb-4 text-xs text-muted-foreground">
+          Class Teacher: <strong>{classTeacher}</strong>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse border border-primary text-xs">
           <thead>
             <tr className="bg-primary text-primary-foreground text-[10px]">
-              <th className="border border-primary/50 p-2">ROLL NO</th>
+              <th className="border border-primary/50 p-2">SR</th>
+              <th className="border border-primary/50 p-2">GR NO</th>
               <th className="border border-primary/50 p-2 text-left">STUDENT NAME</th>
               {subjects.map((sub) => (
-                <th key={sub} className="border border-primary/50 p-2 uppercase">
+                <th key={sub} className="border border-primary/50 p-2 uppercase text-[9px]">
                   {sub}
                 </th>
               ))}
@@ -88,13 +90,14 @@ const MarksheetEntry = ({ selectedClass }: MarksheetEntryProps) => {
             </tr>
           </thead>
           <tbody>
-            {students.map((student) => {
+            {students.map((student, idx) => {
               const total = getTotal(student.marks);
               const pct = getPercentage(student.marks);
               return (
-                <tr key={student.rollNo} className="hover:bg-primary/5 transition">
-                  <td className="border border-primary/30 p-2 text-center font-bold">{student.rollNo}</td>
-                  <td className="border border-primary/30 p-2 uppercase font-semibold">{student.name}</td>
+                <tr key={student.grNo} className="hover:bg-primary/5 transition">
+                  <td className="border border-primary/30 p-1 text-center text-[10px]">{idx + 1}</td>
+                  <td className="border border-primary/30 p-1 text-center font-bold text-[10px]">{student.grNo}</td>
+                  <td className="border border-primary/30 p-2 uppercase font-semibold text-[10px] whitespace-nowrap">{student.name}</td>
                   {subjects.map((sub) => (
                     <td key={sub} className="border border-primary/30 p-1 text-center">
                       <input
@@ -102,8 +105,8 @@ const MarksheetEntry = ({ selectedClass }: MarksheetEntryProps) => {
                         min={0}
                         max={maxMarks}
                         value={student.marks[sub] || ""}
-                        onChange={(e) => updateMark(student.rollNo, sub, Number(e.target.value))}
-                        className="w-12 text-center outline-none bg-transparent font-medium"
+                        onChange={(e) => updateMark(student.grNo, sub, Number(e.target.value))}
+                        className="w-10 text-center outline-none bg-transparent font-medium text-[11px]"
                       />
                     </td>
                   ))}
@@ -125,7 +128,9 @@ const MarksheetEntry = ({ selectedClass }: MarksheetEntryProps) => {
         </div>
         <div className="text-center">
           <div className="h-12 mb-1" />
-          <div className="border-t border-foreground text-[10px] pt-1 w-32 font-bold uppercase">Class Teacher</div>
+          <div className="border-t border-foreground text-[10px] pt-1 w-32 font-bold uppercase">
+            {classTeacher || "Class Teacher"}
+          </div>
         </div>
       </div>
     </div>
