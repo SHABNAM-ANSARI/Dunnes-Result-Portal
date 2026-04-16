@@ -1,15 +1,22 @@
 import { useState } from "react";
 import LoginView from "@/components/LoginView";
 import Dashboard from "@/components/Dashboard";
+import { isAdmin } from "@/lib/auth";
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  if (!isLoggedIn) {
-    return <LoginView onLogin={() => setIsLoggedIn(true)} />;
+  if (!userEmail) {
+    return <LoginView onLogin={(email) => setUserEmail(email)} />;
   }
 
-  return <Dashboard onLogout={() => setIsLoggedIn(false)} />;
+  return (
+    <Dashboard
+      onLogout={() => setUserEmail(null)}
+      userEmail={userEmail}
+      isAdmin={isAdmin(userEmail)}
+    />
+  );
 };
 
 export default Index;

@@ -2,12 +2,17 @@ import { useState } from "react";
 import DunnesHeader from "./DunnesHeader";
 
 interface LoginViewProps {
-  onLogin: () => void;
+  onLogin: (email: string) => void;
 }
 
 const LoginView = ({ onLogin }: LoginViewProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const handleLogin = () => {
+    if (!email.trim()) return;
+    onLogin(email.trim());
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary/5">
@@ -30,7 +35,7 @@ const LoginView = ({ onLogin }: LoginViewProps) => {
             onChange={(e) => setPassword(e.target.value)}
           />
           <button
-            onClick={onLogin}
+            onClick={handleLogin}
             className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-bold hover:bg-primary/90 transition"
           >
             Verify & Enter
