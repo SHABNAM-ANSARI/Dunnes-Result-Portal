@@ -4,9 +4,11 @@ import { CLASS_OPTIONS, TERM_OPTIONS, STUDENTS_BY_CLASS, getTeacherForClass } fr
 
 interface DashboardProps {
   onLogout: () => void;
+  userEmail: string;
+  isAdmin: boolean;
 }
 
-const Dashboard = ({ onLogout }: DashboardProps) => {
+const Dashboard = ({ onLogout, userEmail, isAdmin }: DashboardProps) => {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [showEntry, setShowEntry] = useState(false);
@@ -17,7 +19,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   return (
     <div className="min-h-screen p-6 bg-background">
       <nav className="flex justify-between items-center mb-8 bg-card p-4 rounded-xl shadow-sm">
-        <span className="font-black text-primary text-lg">DUNNE'S PORTAL</span>
+        <div className="flex items-center gap-3">
+          <span className="font-black text-primary text-lg">DUNNE'S PORTAL</span>
+          <span className={`text-xs font-bold px-2 py-1 rounded ${isAdmin ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            {isAdmin ? "ADMIN" : "TEACHER"}
+          </span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">{userEmail}</span>
+        </div>
         <button onClick={onLogout} className="text-destructive font-bold text-sm hover:underline">
           Logout
         </button>
@@ -25,27 +33,31 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="bg-card p-8 rounded-xl shadow-md border border-primary/10">
-          <h2 className="text-xl font-bold text-primary mb-6">Portal Setup (From CSV Files)</h2>
+          <h2 className="text-xl font-bold text-primary mb-6">
+            {isAdmin ? "Portal Setup (From CSV Files)" : "Marksheet Entry"}
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="font-bold text-primary mb-1">1. Student Master Data</p>
-              <p className="text-xs text-muted-foreground">Connected: Students_Master.csv</p>
-              <p className="text-xs text-primary font-semibold mt-1">291 students loaded</p>
+          {isAdmin && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="font-bold text-primary mb-1">1. Student Master Data</p>
+                <p className="text-xs text-muted-foreground">Connected: Students_Master.csv</p>
+                <p className="text-xs text-primary font-semibold mt-1">291 students loaded</p>
+              </div>
+              <div className="p-4 bg-accent/10 rounded-lg border border-accent/30">
+                <p className="font-bold text-accent-foreground mb-1">2. Subject Mapping</p>
+                <p className="text-xs text-muted-foreground">Connected: Subject_Maping.csv</p>
+                <p className="text-xs text-primary font-semibold mt-1">10 classes mapped</p>
+              </div>
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="font-bold text-accent-foreground mb-1">3. Teacher Database</p>
+                <p className="text-xs text-muted-foreground">Connected: Teacher_Database.csv</p>
+                <p className="text-xs text-primary font-semibold mt-1">15 teachers loaded</p>
+              </div>
             </div>
-            <div className="p-4 bg-accent/10 rounded-lg border border-accent/30">
-              <p className="font-bold text-accent-foreground mb-1">2. Subject Mapping</p>
-              <p className="text-xs text-muted-foreground">Connected: Subject_Maping.csv</p>
-              <p className="text-xs text-primary font-semibold mt-1">10 classes mapped</p>
-            </div>
-            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="font-bold text-accent-foreground mb-1">3. Teacher Database</p>
-              <p className="text-xs text-muted-foreground">Connected: Teacher_Database.csv</p>
-              <p className="text-xs text-primary font-semibold mt-1">15 teachers loaded</p>
-            </div>
-          </div>
+          )}
 
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-2 font-bold text-foreground text-sm">Select Class:</label>
               <select
