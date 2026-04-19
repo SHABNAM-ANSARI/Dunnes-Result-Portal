@@ -30,26 +30,48 @@ const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) =>
   const maxMarks = 100;
   const classTeacher = getTeacherForClass(selectedClass);
 
+  const storageKey = `dunnes_marks_${selectedClass}_${selectedTerm}`;
+
   const initialStudents = useMemo(() => {
     const csvStudents = STUDENTS_BY_CLASS[selectedClass] || [];
-    return csvStudents.map((s, idx) => ({
+    const base = csvStudents.map((s, idx) => ({
       grNo: s.grNo,
       name: s.name,
       rollNo: s.rollNo || String(idx + 1),
-      marks: Object.fromEntries(subjects.map((sub) => [sub, 0])),
+      marks: Object.fromEntries(subjects.map((sub) => [sub, 0])) as Record<string, number>,
     }));
-  }, [selectedClass]);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const savedMarks: Record<string, Record<string, number>> = JSON.parse(saved);
+        return base.map((s) => ({ ...s, marks: { ...s.marks, ...(savedMarks[s.grNo] || {}) } }));
+      }
+    } catch {}
+    return base;
+  }, [selectedClass, selectedTerm]);
 
   const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [savedAt, setSavedAt] = useState<string>("");
+
+  const persist = (next: Student[]) => {
+    try {
+      const map: Record<string, Record<string, number>> = {};
+      next.forEach((s) => (map[s.grNo] = s.marks));
+      localStorage.setItem(storageKey, JSON.stringify(map));
+      setSavedAt(new Date().toLocaleTimeString());
+    } catch {}
+  };
 
   const updateMark = (grNo: string, subject: string, value: number) => {
-    setStudents((prev) =>
-      prev.map((s) =>
+    setStudents((prev) => {
+      const next = prev.map((s) =>
         s.grNo === grNo
           ? { ...s, marks: { ...s.marks, [subject]: Math.min(maxMarks, Math.max(0, value)) } }
           : s
-      )
-    );
+      );
+      persist(next);
+      return next;
+    });
   };
 
   const getTotal = (marks: Record<string, number>) =>
@@ -68,8 +90,9 @@ const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) =>
         <span>MAX MARKS: {maxMarks}/subject</span>
       </div>
       {classTeacher && (
-        <div className="mb-4 text-xs text-muted-foreground">
-          Class Teacher: <strong>{classTeacher}</strong>
+        <div className="mb-4 text-xs text-muted-foreground flex justify-between">
+          <span>Class Teacher: <strong>{classTeacher}</strong></span>
+          {savedAt && <span className="text-primary font-semibold">✓ Auto-saved at {savedAt}</span>}
         </div>
       )}
       <div className="overflow-x-auto">
