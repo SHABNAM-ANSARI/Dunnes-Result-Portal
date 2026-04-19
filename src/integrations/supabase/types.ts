@@ -14,7 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admins: {
+        Row: {
+          created_at: string
+          id: string
+          mobile: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mobile: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mobile?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      marks: {
+        Row: {
+          class_name: string
+          created_at: string
+          entered_by_mobile: string | null
+          gr_no: string
+          id: string
+          marks: number
+          student_name: string
+          subject: string
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          class_name: string
+          created_at?: string
+          entered_by_mobile?: string | null
+          gr_no: string
+          id?: string
+          marks?: number
+          student_name: string
+          subject: string
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          class_name?: string
+          created_at?: string
+          entered_by_mobile?: string | null
+          gr_no?: string
+          id?: string
+          marks?: number
+          student_name?: string
+          subject?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teachers: {
+        Row: {
+          classes: string
+          created_at: string
+          designation: string
+          id: string
+          mobile: string
+          name: string
+        }
+        Insert: {
+          classes?: string
+          created_at?: string
+          designation?: string
+          id?: string
+          mobile: string
+          name: string
+        }
+        Update: {
+          classes?: string
+          created_at?: string
+          designation?: string
+          id?: string
+          mobile?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
