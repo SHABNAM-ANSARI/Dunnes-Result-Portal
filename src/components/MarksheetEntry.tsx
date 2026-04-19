@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DunnesHeader from "./DunnesHeader";
 import signature from "@/assets/principal-signature.png";
 import { STUDENTS_BY_CLASS, ACADEMIC_SUBJECTS, getTeacherForClass } from "@/data/schoolData";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Student {
   grNo: string;
@@ -13,6 +15,7 @@ interface Student {
 interface MarksheetEntryProps {
   selectedClass: string;
   selectedTerm: string;
+  userMobile?: string;
 }
 
 const getGrade = (percentage: number): string => {
@@ -25,53 +28,97 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
-const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) => {
+const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEntryProps) => {
   const subjects = ACADEMIC_SUBJECTS[selectedClass] || ACADEMIC_SUBJECTS["Class 1"];
   const maxMarks = 100;
   const classTeacher = getTeacherForClass(selectedClass);
 
-  const storageKey = `dunnes_marks_${selectedClass}_${selectedTerm}`;
-
-  const initialStudents = useMemo(() => {
+  const baseStudents = useMemo<Student[]>(() => {
     const csvStudents = STUDENTS_BY_CLASS[selectedClass] || [];
-    const base = csvStudents.map((s, idx) => ({
+    return csvStudents.map((s, idx) => ({
       grNo: s.grNo,
       name: s.name,
       rollNo: s.rollNo || String(idx + 1),
       marks: Object.fromEntries(subjects.map((sub) => [sub, 0])) as Record<string, number>,
     }));
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const savedMarks: Record<string, Record<string, number>> = JSON.parse(saved);
-        return base.map((s) => ({ ...s, marks: { ...s.marks, ...(savedMarks[s.grNo] || {}) } }));
-      }
-    } catch {}
-    return base;
-  }, [selectedClass, selectedTerm]);
+  }, [selectedClass]);
 
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [students, setStudents] = useState<Student[]>(baseStudents);
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<string>("");
   const [savedAt, setSavedAt] = useState<string>("");
 
-  const persist = (next: Student[]) => {
-    try {
-      const map: Record<string, Record<string, number>> = {};
-      next.forEach((s) => (map[s.grNo] = s.marks));
-      localStorage.setItem(storageKey, JSON.stringify(map));
+  // Load existing marks from Cloud whenever class/term changes
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setStudents(baseStudents);
+      const { data, error } = await supabase
+        .from("marks")
+        .select("gr_no, subject, marks")
+        .eq("class_name", selectedClass)
+        .eq("term", selectedTerm);
+
+      if (cancelled) return;
+      if (error) {
+        toast.error("Could not load saved marks.");
+        console.error(error);
+      } else if (data) {
+        const map: Record<string, Record<string, number>> = {};
+        data.forEach((row) => {
+          map[row.gr_no] ||= {};
+          map[row.gr_no][row.subject] = row.marks;
+        });
+        setStudents((prev) =>
+          prev.map((s) => ({ ...s, marks: { ...s.marks, ...(map[s.grNo] || {}) } }))
+        );
+      }
+      setLoading(false);
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClass, selectedTerm, baseStudents]);
+
+  const persistMark = async (
+    student: Student,
+    subject: string,
+    value: number
+  ) => {
+    const key = `${student.grNo}-${subject}`;
+    setSavingKey(key);
+    const { error } = await supabase.from("marks").upsert(
+      {
+        class_name: selectedClass,
+        term: selectedTerm,
+        gr_no: student.grNo,
+        student_name: student.name,
+        subject,
+        marks: value,
+        entered_by_mobile: userMobile || null,
+      },
+      { onConflict: "class_name,term,gr_no,subject" }
+    );
+    setSavingKey("");
+    if (error) {
+      console.error(error);
+      toast.error(`Save failed for ${student.name} – ${subject}`);
+    } else {
       setSavedAt(new Date().toLocaleTimeString());
-    } catch {}
+    }
   };
 
   const updateMark = (grNo: string, subject: string, value: number) => {
-    setStudents((prev) => {
-      const next = prev.map((s) =>
-        s.grNo === grNo
-          ? { ...s, marks: { ...s.marks, [subject]: Math.min(maxMarks, Math.max(0, value)) } }
-          : s
-      );
-      persist(next);
-      return next;
-    });
+    const clamped = Math.min(maxMarks, Math.max(0, value));
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.grNo === grNo ? { ...s, marks: { ...s.marks, [subject]: clamped } } : s
+      )
+    );
+    const student = students.find((s) => s.grNo === grNo);
+    if (student) persistMark({ ...student, marks: { ...student.marks, [subject]: clamped } }, subject, clamped);
   };
 
   const getTotal = (marks: Record<string, number>) =>
@@ -92,7 +139,15 @@ const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) =>
       {classTeacher && (
         <div className="mb-4 text-xs text-muted-foreground flex justify-between">
           <span>Class Teacher: <strong>{classTeacher}</strong></span>
-          {savedAt && <span className="text-primary font-semibold">✓ Auto-saved at {savedAt}</span>}
+          <span className="text-primary font-semibold">
+            {loading
+              ? "Loading from cloud…"
+              : savingKey
+              ? "Saving…"
+              : savedAt
+              ? `✓ Cloud-saved at ${savedAt}`
+              : "✓ Loaded from cloud"}
+          </span>
         </div>
       )}
       <div className="overflow-x-auto">
@@ -129,7 +184,8 @@ const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) =>
                         max={maxMarks}
                         value={student.marks[sub] || ""}
                         onChange={(e) => updateMark(student.grNo, sub, Number(e.target.value))}
-                        className="w-10 text-center outline-none bg-transparent font-medium text-[11px]"
+                        disabled={loading}
+                        className="w-10 text-center outline-none bg-transparent font-medium text-[11px] disabled:opacity-50"
                       />
                     </td>
                   ))}
