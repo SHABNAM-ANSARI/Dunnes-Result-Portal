@@ -6,9 +6,10 @@ interface DashboardProps {
   onLogout: () => void;
   userEmail: string;
   isAdmin: boolean;
+  userMobile?: string;
 }
 
-const Dashboard = ({ onLogout, userEmail, isAdmin }: DashboardProps) => {
+const Dashboard = ({ onLogout, userEmail, isAdmin, userMobile }: DashboardProps) => {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [showEntry, setShowEntry] = useState(false);
@@ -108,7 +109,13 @@ const Dashboard = ({ onLogout, userEmail, isAdmin }: DashboardProps) => {
           </button>
         </div>
 
-        {showEntry && <MarksheetEntry selectedClass={selectedClass} selectedTerm={selectedTerm} />}
+        {showEntry && (
+          <MarksheetEntry
+            selectedClass={selectedClass}
+            selectedTerm={selectedTerm}
+            userMobile={userMobile}
+          />
+        )}
       </div>
     </div>
   );

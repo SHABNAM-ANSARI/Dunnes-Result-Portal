@@ -40,6 +40,7 @@ const Index = () => {
       onLogout={handleLogout}
       userEmail={`${user.name} (${user.mobile})`}
       isAdmin={user.isAdmin}
+      userMobile={user.mobile}
     />
   );
 };
