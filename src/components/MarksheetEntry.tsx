@@ -90,8 +90,9 @@ const MarksheetEntry = ({ selectedClass, selectedTerm }: MarksheetEntryProps) =>
         <span>MAX MARKS: {maxMarks}/subject</span>
       </div>
       {classTeacher && (
-        <div className="mb-4 text-xs text-muted-foreground">
-          Class Teacher: <strong>{classTeacher}</strong>
+        <div className="mb-4 text-xs text-muted-foreground flex justify-between">
+          <span>Class Teacher: <strong>{classTeacher}</strong></span>
+          {savedAt && <span className="text-primary font-semibold">✓ Auto-saved at {savedAt}</span>}
         </div>
       )}
       <div className="overflow-x-auto">
