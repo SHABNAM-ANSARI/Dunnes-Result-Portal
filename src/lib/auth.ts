@@ -1,21 +1,43 @@
-import { TEACHERS, TeacherData } from "@/data/schoolData";
+import { supabase } from "@/integrations/supabase/client";
 
-// 🔑 ADMIN MOBILE NUMBERS — Jagruti, Sandhya, Shabnam
-export const ADMIN_MOBILES = [
-  "9136784197", // Mrs. Jagruti Malwadia
-  "9920874815", // Mrs. Sandhya Durgam
-  "7666174744", // Mrs. Shabnam Yusuf Ansari
-];
+export interface AuthLookup {
+  name: string;
+  mobile: string;
+  isAdmin: boolean;
+}
 
-const normalize = (m: string) => (m || "").replace(/\D/g, "").replace(/^91/, "").slice(-10);
+const normalize = (m: string) =>
+  (m || "").replace(/\D/g, "").replace(/^91/, "").slice(-10);
 
-export const findUserByMobile = (mobile: string): TeacherData | null => {
+/**
+ * Look up a mobile number in the Cloud database.
+ * Returns the user (with admin flag) if found in either `admins` or `teachers`.
+ * Returns null if the mobile is not registered.
+ */
+export const lookupUserByMobile = async (
+  mobile: string
+): Promise<AuthLookup | null> => {
   const n = normalize(mobile);
   if (!n || n.length !== 10) return null;
-  return TEACHERS.find((t) => normalize(t.mobile) === n) || null;
-};
 
-export const isAdminMobile = (mobile: string | null | undefined): boolean => {
-  if (!mobile) return false;
-  return ADMIN_MOBILES.map(normalize).includes(normalize(mobile));
+  // Check admins first (admin trumps teacher)
+  const { data: admins } = await supabase
+    .from("admins")
+    .select("name, mobile");
+
+  const adminMatch = admins?.find((a) => normalize(a.mobile) === n);
+  if (adminMatch) {
+    return { name: adminMatch.name, mobile: n, isAdmin: true };
+  }
+
+  const { data: teachers } = await supabase
+    .from("teachers")
+    .select("name, mobile");
+
+  const teacherMatch = teachers?.find((t) => normalize(t.mobile) === n);
+  if (teacherMatch) {
+    return { name: teacherMatch.name, mobile: n, isAdmin: false };
+  }
+
+  return null;
 };
