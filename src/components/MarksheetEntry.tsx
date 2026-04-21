@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import DunnesHeader from "./DunnesHeader";
 import signature from "@/assets/principal-signature.png";
 import { STUDENTS_BY_CLASS, ACADEMIC_SUBJECTS, getTeacherForClass } from "@/data/schoolData";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 interface Student {
