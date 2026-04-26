@@ -67,6 +67,9 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
   const [savingKey, setSavingKey] = useState<string>("");
   const [savedAt, setSavedAt] = useState<string>("");
   const [previewGrNo, setPreviewGrNo] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"single" | "all">("single");
+  const [activeIdx, setActiveIdx] = useState<number>(0);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   // Load saved marks + remarks
   useEffect(() => {
