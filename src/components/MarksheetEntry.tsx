@@ -139,36 +139,6 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     };
   }, [selectedClass, selectedTerm, baseStudents]);
 
-  const persistEntry = async (
-    student: Student,
-    subject: SubjectDef,
-    numericValue: number | null,
-    gradeValue: GradeValue | "" | null,
-  ) => {
-    const key = `${student.grNo}-${subject.name}`;
-    setSavingKey(key);
-    const { error } = await supabase.from("marks").upsert(
-      {
-        class_name: selectedClass,
-        term: selectedTerm,
-        gr_no: student.grNo,
-        student_name: student.name,
-        subject: subject.name,
-        marks: subject.type === "regular" ? numericValue ?? 0 : null,
-        grade: subject.type === "credit" ? (gradeValue || null) : null,
-        entered_by_mobile: userMobile || null,
-      },
-      { onConflict: "class_name,term,gr_no,subject" },
-    );
-    setSavingKey("");
-    if (error) {
-      console.error(error);
-      toast.error(`Save failed for ${student.name} – ${subject.name}`);
-    } else {
-      setSavedAt(new Date().toLocaleTimeString());
-    }
-  };
-
   const updateMark = (grNo: string, subject: SubjectDef, value: number) => {
     const clamped = Math.min(MAX_MARKS, Math.max(0, value));
     setStudents((prev) =>
