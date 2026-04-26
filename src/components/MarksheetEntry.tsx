@@ -246,11 +246,6 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     setRemarksByGr((prev) => ({ ...prev, [student.grNo]: next }));
   };
 
-  const blurSaveRemark = (student: Student) => {
-    const row = remarksByGr[student.grNo];
-    if (row) persistRemarks(student, row);
-  };
-
   const getNumericTotal = (m: Record<string, number>) =>
     regularSubjects.reduce((sum, sub) => sum + (m[sub.name] || 0), 0);
   const getNumericPct = (m: Record<string, number>) =>
