@@ -171,27 +171,81 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
 
   const updateMark = (grNo: string, subject: SubjectDef, value: number) => {
     const clamped = Math.min(MAX_MARKS, Math.max(0, value));
-    let updated: Student | undefined;
     setStudents((prev) =>
-      prev.map((s) => {
-        if (s.grNo !== grNo) return s;
-        updated = { ...s, marks: { ...s.marks, [subject.name]: clamped } };
-        return updated;
-      }),
+      prev.map((s) =>
+        s.grNo === grNo ? { ...s, marks: { ...s.marks, [subject.name]: clamped } } : s,
+      ),
     );
-    if (updated) persistEntry(updated, subject, clamped, null);
   };
 
   const updateGrade = (grNo: string, subject: SubjectDef, value: GradeValue | "") => {
-    let updated: Student | undefined;
     setStudents((prev) =>
-      prev.map((s) => {
-        if (s.grNo !== grNo) return s;
-        updated = { ...s, grades: { ...s.grades, [subject.name]: value } };
-        return updated;
-      }),
+      prev.map((s) =>
+        s.grNo === grNo ? { ...s, grades: { ...s.grades, [subject.name]: value } } : s,
+      ),
     );
-    if (updated) persistEntry(updated, subject, null, value);
+  };
+
+  const saveStudent = async (student: Student) => {
+    setSavingKey(student.grNo);
+    const rows = [
+      ...regularSubjects.map((sub) => ({
+        class_name: selectedClass,
+        term: selectedTerm,
+        gr_no: student.grNo,
+        student_name: student.name,
+        subject: sub.name,
+        marks: student.marks[sub.name] ?? 0,
+        grade: null as string | null,
+        entered_by_mobile: userMobile || null,
+      })),
+      ...creditSubjects
+        .filter((sub) => student.grades[sub.name])
+        .map((sub) => ({
+          class_name: selectedClass,
+          term: selectedTerm,
+          gr_no: student.grNo,
+          student_name: student.name,
+          subject: sub.name,
+          marks: null as number | null,
+          grade: student.grades[sub.name] || null,
+          entered_by_mobile: userMobile || null,
+        })),
+    ];
+    const { error } = await supabase
+      .from("marks")
+      .upsert(rows, { onConflict: "class_name,term,gr_no,subject" });
+    setSavingKey("");
+    if (error) {
+      console.error(error);
+      toast.error(`Save failed for ${student.name}`);
+      return false;
+    }
+    // Also save remarks if present
+    const r = remarksByGr[student.grNo];
+    if (r && (r.remarks || r.teacherSignature || r.principalSignature)) {
+      await persistRemarks(student, r);
+    }
+    setSavedAt(new Date().toLocaleTimeString());
+    return true;
+  };
+
+  const saveAll = async () => {
+    setBulkSaving(true);
+    let ok = 0;
+    let fail = 0;
+    for (const s of students) {
+      // skip students with no entries at all
+      const hasMarks = regularSubjects.some((sub) => (s.marks[sub.name] ?? 0) > 0);
+      const hasGrades = creditSubjects.some((sub) => s.grades[sub.name]);
+      if (!hasMarks && !hasGrades) continue;
+      const success = await saveStudent(s);
+      if (success) ok++;
+      else fail++;
+    }
+    setBulkSaving(false);
+    if (fail === 0) toast.success(`Saved marks for ${ok} student${ok === 1 ? "" : "s"}`);
+    else toast.warning(`Saved ${ok}, failed ${fail}`);
   };
 
   const persistRemarks = async (student: Student, row: RemarksRow) => {
