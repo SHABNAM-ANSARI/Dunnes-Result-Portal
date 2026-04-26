@@ -287,16 +287,51 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     regularSubjects.length === 0 ? 0 : (getNumericTotal(m) / (regularSubjects.length * MAX_MARKS)) * 100;
 
   const previewStudent = students.find((s) => s.grNo === previewGrNo);
+  const activeStudent = students[activeIdx];
+
+  const inputCls =
+    "w-14 h-9 text-center bg-background border-2 border-primary/30 rounded-md font-semibold text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50";
+  const selectCls =
+    "h-9 px-2 bg-background border-2 border-accent rounded-md font-bold text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer disabled:opacity-50";
 
   return (
     <div className="mt-10 report-card p-6 shadow-2xl rounded-xl print:shadow-none">
       <DunnesHeader />
-      <div className="flex flex-wrap gap-4 justify-between mb-4 font-bold text-sm text-primary">
-        <span>CLASS: {selectedClass}</span>
-        <span>TERM: {selectedTerm}</span>
-        <span>STUDENTS: {students.length}</span>
-        <span>MAX MARKS: {MAX_MARKS}/subject</span>
+
+      {/* Toolbar */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b-2 border-primary/30 -mx-6 px-6 py-3 mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3 text-sm font-bold text-primary">
+          <span>CLASS: {selectedClass}</span>
+          <span>•</span>
+          <span>TERM: {selectedTerm}</span>
+          <span>•</span>
+          <span>{students.length} students</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md overflow-hidden border-2 border-primary">
+            <button
+              onClick={() => setViewMode("single")}
+              className={`px-3 py-1.5 text-xs font-bold ${viewMode === "single" ? "bg-primary text-primary-foreground" : "bg-background text-primary"}`}
+            >
+              ONE STUDENT
+            </button>
+            <button
+              onClick={() => setViewMode("all")}
+              className={`px-3 py-1.5 text-xs font-bold ${viewMode === "all" ? "bg-primary text-primary-foreground" : "bg-background text-primary"}`}
+            >
+              FULL TABLE
+            </button>
+          </div>
+          <button
+            onClick={saveAll}
+            disabled={loading || bulkSaving}
+            className="px-5 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm shadow-md hover:bg-primary/90 disabled:opacity-50 transition"
+          >
+            {bulkSaving ? "Saving…" : "💾 SAVE ALL MARKS"}
+          </button>
+        </div>
       </div>
+
       {classTeacher && (
         <div className="mb-4 text-xs text-muted-foreground flex justify-between">
           <span>
@@ -305,7 +340,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
           <span className="text-primary font-semibold">
             {loading
               ? "Loading from cloud…"
-              : savingKey
+              : savingKey || bulkSaving
                 ? "Saving…"
                 : savedAt
                   ? `✓ Saved at ${savedAt}`
@@ -314,136 +349,279 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-primary text-xs">
-          <thead>
-            <tr className="bg-primary text-primary-foreground text-[10px]">
-              <th className="border border-primary/50 p-2">SR</th>
-              <th className="border border-primary/50 p-2">GR NO</th>
-              <th className="border border-primary/50 p-2 text-left">STUDENT NAME</th>
+      {/* SINGLE STUDENT MODE */}
+      {viewMode === "single" && activeStudent && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between bg-primary/5 border border-primary/30 rounded-lg p-3">
+            <button
+              onClick={() => setActiveIdx((i) => Math.max(0, i - 1))}
+              disabled={activeIdx === 0}
+              className="px-3 py-1.5 bg-background border border-primary rounded font-bold text-primary text-sm disabled:opacity-30"
+            >
+              ← Prev
+            </button>
+            <div className="text-center">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Student {activeIdx + 1} of {students.length}
+              </div>
+              <div className="font-black text-lg text-primary uppercase">{activeStudent.name}</div>
+              <div className="text-xs text-muted-foreground">GR No: {activeStudent.grNo} • Roll: {activeStudent.rollNo}</div>
+            </div>
+            <button
+              onClick={() => setActiveIdx((i) => Math.min(students.length - 1, i + 1))}
+              disabled={activeIdx >= students.length - 1}
+              className="px-3 py-1.5 bg-background border border-primary rounded font-bold text-primary text-sm disabled:opacity-30"
+            >
+              Next →
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Jump to:</span>
+            <select
+              value={activeIdx}
+              onChange={(e) => setActiveIdx(Number(e.target.value))}
+              className="border border-primary/30 rounded px-2 py-1 bg-background"
+            >
+              {students.map((s, i) => (
+                <option key={s.grNo} value={i}>
+                  {i + 1}. {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="border-2 border-primary/30 rounded-lg p-4">
+            <h3 className="font-bold text-primary uppercase text-sm mb-3">📘 Regular Subjects (out of {MAX_MARKS})</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {regularSubjects.map((sub) => (
-                <th key={sub.name} className="border border-primary/50 p-2 uppercase text-[9px]" title="Numeric / 100">
-                  {sub.name}
-                </th>
+                <label key={sub.name} className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase">{sub.name}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={MAX_MARKS}
+                    value={activeStudent.marks[sub.name] || ""}
+                    onChange={(e) => updateMark(activeStudent.grNo, sub, Number(e.target.value))}
+                    disabled={loading}
+                    placeholder="0"
+                    className={inputCls + " w-full"}
+                  />
+                </label>
               ))}
+            </div>
+          </div>
+
+          <div className="border-2 border-accent rounded-lg p-4 bg-accent/5">
+            <h3 className="font-bold text-primary uppercase text-sm mb-3">🎨 Credit Subjects (Grade only)</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {creditSubjects.map((sub) => (
-                <th
-                  key={sub.name}
-                  className="border border-primary/50 p-2 uppercase text-[9px] bg-accent/40"
-                  title="Credit subject – grade only"
-                >
-                  {sub.name}
-                </th>
+                <label key={sub.name} className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase">{sub.name}</span>
+                  <select
+                    value={activeStudent.grades[sub.name] || ""}
+                    onChange={(e) => updateGrade(activeStudent.grNo, sub, e.target.value as GradeValue | "")}
+                    disabled={loading}
+                    className={selectCls + " w-full"}
+                  >
+                    <option value="">— Select —</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               ))}
-              <th className="border border-primary/50 p-2">TOTAL</th>
-              <th className="border border-primary/50 p-2">%</th>
-              <th className="border border-primary/50 p-2">GRADE</th>
-              <th className="border border-primary/50 p-2 min-w-[12rem]">REMARKS</th>
-              <th className="border border-primary/50 p-2">PREVIEW</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((student, idx) => {
-              const total = getNumericTotal(student.marks);
-              const pct = getNumericPct(student.marks);
-              const remarkRow = remarksByGr[student.grNo] || {
-                remarks: "",
-                teacherSignature: "",
-                principalSignature: "",
-              };
-              return (
-                <tr key={student.grNo} className="hover:bg-primary/5 transition">
-                  <td className="border border-primary/30 p-1 text-center text-[10px]">{idx + 1}</td>
-                  <td className="border border-primary/30 p-1 text-center font-bold text-[10px]">{student.grNo}</td>
-                  <td className="border border-primary/30 p-2 uppercase font-semibold text-[10px] whitespace-nowrap">
-                    {student.name}
-                  </td>
+            </div>
+          </div>
 
-                  {regularSubjects.map((sub) => (
-                    <td key={sub.name} className="border border-primary/30 p-1 text-center">
-                      <input
-                        type="number"
-                        min={0}
-                        max={MAX_MARKS}
-                        value={student.marks[sub.name] || ""}
-                        onChange={(e) => updateMark(student.grNo, sub, Number(e.target.value))}
-                        disabled={loading}
-                        className="w-12 text-center outline-none bg-transparent font-medium text-[11px] disabled:opacity-50"
+          <div className="grid md:grid-cols-3 gap-3">
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+              <div className="text-[10px] uppercase text-muted-foreground">Total</div>
+              <div className="text-2xl font-black text-primary">{getNumericTotal(activeStudent.marks)}</div>
+            </div>
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+              <div className="text-[10px] uppercase text-muted-foreground">Percentage</div>
+              <div className="text-2xl font-black text-primary">{getNumericPct(activeStudent.marks).toFixed(1)}%</div>
+            </div>
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+              <div className="text-[10px] uppercase text-muted-foreground">Grade</div>
+              <div className="text-2xl font-black text-primary">{getGrade(getNumericPct(activeStudent.marks))}</div>
+            </div>
+          </div>
+
+          <div className="border-2 border-primary/30 rounded-lg p-4 space-y-3">
+            <h3 className="font-bold text-primary uppercase text-sm">📝 Remarks & Signatures</h3>
+            <textarea
+              value={(remarksByGr[activeStudent.grNo]?.remarks) || ""}
+              onChange={(e) => updateRemark(activeStudent, "remarks", e.target.value)}
+              placeholder="Teacher's remarks…"
+              rows={3}
+              className="w-full p-2 border-2 border-primary/30 rounded-md text-sm focus:border-primary focus:outline-none bg-background"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                value={(remarksByGr[activeStudent.grNo]?.teacherSignature) || ""}
+                onChange={(e) => updateRemark(activeStudent, "teacherSignature", e.target.value)}
+                placeholder="Teacher signature"
+                className="p-2 border-2 border-primary/30 rounded-md text-sm focus:border-primary focus:outline-none bg-background"
+              />
+              <input
+                type="text"
+                value={(remarksByGr[activeStudent.grNo]?.principalSignature) || ""}
+                onChange={(e) => updateRemark(activeStudent, "principalSignature", e.target.value)}
+                placeholder="Principal signature"
+                className="p-2 border-2 border-primary/30 rounded-md text-sm focus:border-primary focus:outline-none bg-background"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              onClick={() => setPreviewGrNo(previewGrNo === activeStudent.grNo ? "" : activeStudent.grNo)}
+              className="px-4 py-2 border-2 border-primary text-primary font-bold rounded-md text-sm hover:bg-primary/10"
+            >
+              {previewGrNo === activeStudent.grNo ? "Hide Result Card" : "👁 Preview Result Card"}
+            </button>
+            <button
+              onClick={async () => {
+                const ok = await saveStudent(activeStudent);
+                if (ok) toast.success(`Saved ${activeStudent.name}`);
+              }}
+              disabled={loading || !!savingKey}
+              className="px-5 py-2 bg-primary text-primary-foreground rounded-md font-bold text-sm shadow hover:bg-primary/90 disabled:opacity-50"
+            >
+              {savingKey === activeStudent.grNo ? "Saving…" : "💾 Save This Student"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* FULL TABLE MODE */}
+      {viewMode === "all" && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-primary text-xs">
+            <thead>
+              <tr className="bg-primary text-primary-foreground text-[10px]">
+                <th className="border border-primary/50 p-2">SR</th>
+                <th className="border border-primary/50 p-2">GR NO</th>
+                <th className="border border-primary/50 p-2 text-left">STUDENT NAME</th>
+                {regularSubjects.map((sub) => (
+                  <th key={sub.name} className="border border-primary/50 p-2 uppercase text-[9px]">
+                    {sub.name}
+                  </th>
+                ))}
+                {creditSubjects.map((sub) => (
+                  <th key={sub.name} className="border border-primary/50 p-2 uppercase text-[9px] bg-accent/40">
+                    {sub.name}
+                  </th>
+                ))}
+                <th className="border border-primary/50 p-2">TOTAL</th>
+                <th className="border border-primary/50 p-2">%</th>
+                <th className="border border-primary/50 p-2">GRADE</th>
+                <th className="border border-primary/50 p-2 min-w-[10rem]">REMARKS</th>
+                <th className="border border-primary/50 p-2">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student, idx) => {
+                const total = getNumericTotal(student.marks);
+                const pct = getNumericPct(student.marks);
+                const remarkRow = remarksByGr[student.grNo] || {
+                  remarks: "",
+                  teacherSignature: "",
+                  principalSignature: "",
+                };
+                return (
+                  <tr key={student.grNo} className="hover:bg-primary/5 transition">
+                    <td className="border border-primary/30 p-1 text-center text-[10px]">{idx + 1}</td>
+                    <td className="border border-primary/30 p-1 text-center font-bold text-[10px]">{student.grNo}</td>
+                    <td className="border border-primary/30 p-2 uppercase font-semibold text-[10px] whitespace-nowrap">
+                      {student.name}
+                    </td>
+
+                    {regularSubjects.map((sub) => (
+                      <td key={sub.name} className="border border-primary/30 p-1 text-center">
+                        <input
+                          type="number"
+                          min={0}
+                          max={MAX_MARKS}
+                          value={student.marks[sub.name] || ""}
+                          onChange={(e) => updateMark(student.grNo, sub, Number(e.target.value))}
+                          disabled={loading}
+                          placeholder="0"
+                          className="w-12 h-8 text-center border border-primary/40 rounded bg-background font-medium text-[11px] focus:border-primary focus:outline-none"
+                        />
+                      </td>
+                    ))}
+
+                    {creditSubjects.map((sub) => (
+                      <td key={sub.name} className="border border-primary/30 p-1 text-center bg-accent/10">
+                        <select
+                          value={student.grades[sub.name] || ""}
+                          onChange={(e) => updateGrade(student.grNo, sub, e.target.value as GradeValue | "")}
+                          disabled={loading}
+                          className="h-8 px-1 text-[11px] font-bold border border-accent rounded bg-background focus:border-primary focus:outline-none cursor-pointer"
+                        >
+                          <option value="">—</option>
+                          {GRADE_OPTIONS.map((g) => (
+                            <option key={g} value={g}>
+                              {g}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    ))}
+
+                    <td className="border border-primary/30 p-2 text-center font-bold">{total}</td>
+                    <td className="border border-primary/30 p-2 text-center font-semibold">{pct.toFixed(1)}</td>
+                    <td className="border border-primary/30 p-2 text-center font-black text-primary">
+                      {getGrade(pct)}
+                    </td>
+
+                    <td className="border border-primary/30 p-1">
+                      <textarea
+                        value={remarkRow.remarks}
+                        onChange={(e) => updateRemark(student, "remarks", e.target.value)}
+                        placeholder="Remarks…"
+                        rows={2}
+                        className="w-full text-[10px] p-1 border border-primary/30 rounded bg-background resize-y min-h-[2.5rem] focus:border-primary focus:outline-none"
                       />
                     </td>
-                  ))}
 
-                  {creditSubjects.map((sub) => (
-                    <td key={sub.name} className="border border-primary/30 p-1 text-center bg-accent/10">
-                      <select
-                        value={student.grades[sub.name] || ""}
-                        onChange={(e) => updateGrade(student.grNo, sub, e.target.value as GradeValue | "")}
-                        disabled={loading}
-                        className="bg-transparent text-[11px] font-bold outline-none cursor-pointer disabled:opacity-50"
-                      >
-                        <option value="">—</option>
-                        {GRADE_OPTIONS.map((g) => (
-                          <option key={g} value={g}>
-                            {g}
-                          </option>
-                        ))}
-                      </select>
+                    <td className="border border-primary/30 p-1 text-center">
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={async () => {
+                            const ok = await saveStudent(student);
+                            if (ok) toast.success(`Saved ${student.name}`);
+                          }}
+                          disabled={loading || !!savingKey}
+                          className="text-[10px] font-bold px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {savingKey === student.grNo ? "…" : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setPreviewGrNo(previewGrNo === student.grNo ? "" : student.grNo)}
+                          className="text-[10px] font-bold text-primary hover:underline"
+                        >
+                          {previewGrNo === student.grNo ? "Hide" : "View"}
+                        </button>
+                      </div>
                     </td>
-                  ))}
-
-                  <td className="border border-primary/30 p-2 text-center font-bold">{total}</td>
-                  <td className="border border-primary/30 p-2 text-center font-semibold">{pct.toFixed(1)}</td>
-                  <td className="border border-primary/30 p-2 text-center font-black text-primary">
-                    {getGrade(pct)}
-                  </td>
-
-                  <td className="border border-primary/30 p-1">
-                    <textarea
-                      value={remarkRow.remarks}
-                      onChange={(e) => updateRemark(student, "remarks", e.target.value)}
-                      onBlur={() => blurSaveRemark(student)}
-                      placeholder="Teacher's remarks…"
-                      rows={2}
-                      className="w-full text-[10px] p-1 outline-none bg-transparent border border-primary/20 rounded resize-y min-h-[2.5rem]"
-                    />
-                    <div className="flex gap-1 mt-1">
-                      <input
-                        type="text"
-                        value={remarkRow.teacherSignature}
-                        onChange={(e) => updateRemark(student, "teacherSignature", e.target.value)}
-                        onBlur={() => blurSaveRemark(student)}
-                        placeholder="Teacher sign"
-                        className="w-1/2 text-[9px] p-1 outline-none bg-transparent border border-primary/20 rounded"
-                      />
-                      <input
-                        type="text"
-                        value={remarkRow.principalSignature}
-                        onChange={(e) => updateRemark(student, "principalSignature", e.target.value)}
-                        onBlur={() => blurSaveRemark(student)}
-                        placeholder="Principal sign"
-                        className="w-1/2 text-[9px] p-1 outline-none bg-transparent border border-primary/20 rounded"
-                      />
-                    </div>
-                  </td>
-
-                  <td className="border border-primary/30 p-1 text-center">
-                    <button
-                      onClick={() => setPreviewGrNo(previewGrNo === student.grNo ? "" : student.grNo)}
-                      className="text-[10px] font-bold text-primary hover:underline"
-                    >
-                      {previewGrNo === student.grNo ? "Hide" : "View"}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="mt-6 text-[10px] text-muted-foreground italic">
-        Tip: Numeric marks are out of {MAX_MARKS}. Credit subjects (highlighted) accept a grade only. Changes auto-save
-        as you type / select.
+        Tip: Numeric marks are out of {MAX_MARKS}. Credit subjects accept a grade only. Click <b>SAVE ALL MARKS</b> at the
+        top to push every student's data, or use the per-student Save button.
       </div>
 
       <div className="mt-10 flex justify-between px-4 print:hidden">
