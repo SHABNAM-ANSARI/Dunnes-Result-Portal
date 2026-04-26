@@ -41,8 +41,9 @@ export type Database = {
           created_at: string
           entered_by_mobile: string | null
           gr_no: string
+          grade: string | null
           id: string
-          marks: number
+          marks: number | null
           student_name: string
           subject: string
           term: string
@@ -53,8 +54,9 @@ export type Database = {
           created_at?: string
           entered_by_mobile?: string | null
           gr_no: string
+          grade?: string | null
           id?: string
-          marks?: number
+          marks?: number | null
           student_name: string
           subject: string
           term: string
@@ -65,10 +67,53 @@ export type Database = {
           created_at?: string
           entered_by_mobile?: string | null
           gr_no?: string
+          grade?: string | null
           id?: string
-          marks?: number
+          marks?: number | null
           student_name?: string
           subject?: string
+          term?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      student_term_remarks: {
+        Row: {
+          class_name: string
+          created_at: string
+          entered_by_mobile: string | null
+          gr_no: string
+          id: string
+          principal_signature: string | null
+          remarks: string | null
+          student_name: string
+          teacher_signature: string | null
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          class_name: string
+          created_at?: string
+          entered_by_mobile?: string | null
+          gr_no: string
+          id?: string
+          principal_signature?: string | null
+          remarks?: string | null
+          student_name: string
+          teacher_signature?: string | null
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          class_name?: string
+          created_at?: string
+          entered_by_mobile?: string | null
+          gr_no?: string
+          id?: string
+          principal_signature?: string | null
+          remarks?: string | null
+          student_name?: string
+          teacher_signature?: string | null
           term?: string
           updated_at?: string
         }
