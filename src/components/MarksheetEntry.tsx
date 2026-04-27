@@ -5,6 +5,10 @@ import { STUDENTS_BY_CLASS, getTeacherForClass } from "@/data/schoolData";
 import {
   getSubjectsForClass,
   GRADE_OPTIONS,
+  PASSING_MARKS,
+  MAX_MARKS,
+  computeTotal,
+  computePercentage,
   type GradeValue,
   type SubjectDef,
 } from "@/data/subjectMapping";
@@ -41,8 +45,6 @@ const getGrade = (percentage: number): string => {
   if (percentage >= 40) return "D";
   return "E";
 };
-
-const MAX_MARKS = 100;
 
 const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEntryProps) => {
   const subjects: SubjectDef[] = useMemo(() => getSubjectsForClass(selectedClass), [selectedClass]);
@@ -246,10 +248,8 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     setRemarksByGr((prev) => ({ ...prev, [student.grNo]: next }));
   };
 
-  const getNumericTotal = (m: Record<string, number>) =>
-    regularSubjects.reduce((sum, sub) => sum + (m[sub.name] || 0), 0);
-  const getNumericPct = (m: Record<string, number>) =>
-    regularSubjects.length === 0 ? 0 : (getNumericTotal(m) / (regularSubjects.length * MAX_MARKS)) * 100;
+  const getNumericTotal = (m: Record<string, number>) => computeTotal(m, regularSubjects);
+  const getNumericPct = (m: Record<string, number>) => computePercentage(m, regularSubjects);
 
   const previewStudent = students.find((s) => s.grNo === previewGrNo);
   const activeStudent = students[activeIdx];
