@@ -5,6 +5,10 @@ import { STUDENTS_BY_CLASS, getTeacherForClass } from "@/data/schoolData";
 import {
   getSubjectsForClass,
   GRADE_OPTIONS,
+  PASSING_MARKS,
+  MAX_MARKS,
+  computeTotal,
+  computePercentage,
   type GradeValue,
   type SubjectDef,
 } from "@/data/subjectMapping";
@@ -41,8 +45,6 @@ const getGrade = (percentage: number): string => {
   if (percentage >= 40) return "D";
   return "E";
 };
-
-const MAX_MARKS = 100;
 
 const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEntryProps) => {
   const subjects: SubjectDef[] = useMemo(() => getSubjectsForClass(selectedClass), [selectedClass]);
@@ -246,10 +248,8 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     setRemarksByGr((prev) => ({ ...prev, [student.grNo]: next }));
   };
 
-  const getNumericTotal = (m: Record<string, number>) =>
-    regularSubjects.reduce((sum, sub) => sum + (m[sub.name] || 0), 0);
-  const getNumericPct = (m: Record<string, number>) =>
-    regularSubjects.length === 0 ? 0 : (getNumericTotal(m) / (regularSubjects.length * MAX_MARKS)) * 100;
+  const getNumericTotal = (m: Record<string, number>) => computeTotal(m, regularSubjects);
+  const getNumericPct = (m: Record<string, number>) => computePercentage(m, regularSubjects);
 
   const previewStudent = students.find((s) => s.grNo === previewGrNo);
   const activeStudent = students[activeIdx];
@@ -357,23 +357,27 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
           </div>
 
           <div className="border-2 border-primary/30 rounded-lg p-4">
-            <h3 className="font-bold text-primary uppercase text-sm mb-3">📘 Regular Subjects (out of {MAX_MARKS})</h3>
+            <h3 className="font-bold text-primary uppercase text-sm mb-3">📘 Regular Subjects (out of {MAX_MARKS}, pass = {PASSING_MARKS})</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {regularSubjects.map((sub) => (
-                <label key={sub.name} className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase">{sub.name}</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={MAX_MARKS}
-                    value={activeStudent.marks[sub.name] || ""}
-                    onChange={(e) => updateMark(activeStudent.grNo, sub, Number(e.target.value))}
-                    disabled={loading}
-                    placeholder="0"
-                    className={inputCls + " w-full"}
-                  />
-                </label>
-              ))}
+              {regularSubjects.map((sub) => {
+                const v = activeStudent.marks[sub.name] || 0;
+                const fail = v > 0 && v < PASSING_MARKS;
+                return (
+                  <label key={sub.name} className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase">{sub.name}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={MAX_MARKS}
+                      value={activeStudent.marks[sub.name] || ""}
+                      onChange={(e) => updateMark(activeStudent.grNo, sub, Number(e.target.value))}
+                      disabled={loading}
+                      placeholder="0"
+                      className={inputCls + " w-full " + (fail ? "border-destructive text-destructive" : "")}
+                    />
+                  </label>
+                );
+              })}
             </div>
           </div>
 
