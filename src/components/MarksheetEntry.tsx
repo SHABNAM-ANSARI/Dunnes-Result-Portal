@@ -357,23 +357,27 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
           </div>
 
           <div className="border-2 border-primary/30 rounded-lg p-4">
-            <h3 className="font-bold text-primary uppercase text-sm mb-3">📘 Regular Subjects (out of {MAX_MARKS})</h3>
+            <h3 className="font-bold text-primary uppercase text-sm mb-3">📘 Regular Subjects (out of {MAX_MARKS}, pass = {PASSING_MARKS})</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {regularSubjects.map((sub) => (
-                <label key={sub.name} className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold uppercase">{sub.name}</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={MAX_MARKS}
-                    value={activeStudent.marks[sub.name] || ""}
-                    onChange={(e) => updateMark(activeStudent.grNo, sub, Number(e.target.value))}
-                    disabled={loading}
-                    placeholder="0"
-                    className={inputCls + " w-full"}
-                  />
-                </label>
-              ))}
+              {regularSubjects.map((sub) => {
+                const v = activeStudent.marks[sub.name] || 0;
+                const fail = v > 0 && v < PASSING_MARKS;
+                return (
+                  <label key={sub.name} className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase">{sub.name}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={MAX_MARKS}
+                      value={activeStudent.marks[sub.name] || ""}
+                      onChange={(e) => updateMark(activeStudent.grNo, sub, Number(e.target.value))}
+                      disabled={loading}
+                      placeholder="0"
+                      className={inputCls + " w-full " + (fail ? "border-destructive text-destructive" : "")}
+                    />
+                  </label>
+                );
+              })}
             </div>
           </div>
 
