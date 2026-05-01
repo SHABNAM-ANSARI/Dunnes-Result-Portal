@@ -8,11 +8,12 @@ interface DashboardProps {
   userEmail: string;
   isAdmin: boolean;
   userMobile?: string;
+  onChangePassword?: () => void;
 }
 
 type Mode = "home" | "enter" | "print";
 
-const Dashboard = ({ onLogout, userEmail, isAdmin, userMobile }: DashboardProps) => {
+const Dashboard = ({ onLogout, userEmail, isAdmin, userMobile, onChangePassword }: DashboardProps) => {
   const [mode, setMode] = useState<Mode>("home");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
@@ -44,6 +45,11 @@ const Dashboard = ({ onLogout, userEmail, isAdmin, userMobile }: DashboardProps)
           {mode !== "home" && (
             <button onClick={goHome} className="text-primary font-bold text-sm hover:underline">
               ← Home
+            </button>
+          )}
+          {onChangePassword && (
+            <button onClick={onChangePassword} className="text-primary font-bold text-sm hover:underline">
+              Change Password
             </button>
           )}
           <button onClick={onLogout} className="text-destructive font-bold text-sm hover:underline">

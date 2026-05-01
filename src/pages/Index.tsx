@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import LoginView from "@/components/LoginView";
 import Dashboard from "@/components/Dashboard";
+import ChangePassword from "@/components/ChangePassword";
+import { supabase } from "@/lib/supabase";
+import { signOut } from "@/lib/auth";
 
 interface AuthUser {
   mobile: string;
@@ -12,28 +15,59 @@ const STORAGE_KEY = "dunnes_auth_user";
 
 const Index = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [mustChange, setMustChange] = useState(false);
+  const [showChange, setShowChange] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
-    } catch {}
-    setReady(true);
+    // Restore cached profile + verify session
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const cached = raw ? (JSON.parse(raw) as AuthUser) : null;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session && cached) {
+        setUser(cached);
+        const meta = data.session.user.user_metadata as any;
+        if (meta?.must_change_password) setMustChange(true);
+      }
+      setReady(true);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) {
+        localStorage.removeItem(STORAGE_KEY);
+        setUser(null);
+        setMustChange(false);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  const handleLogin = (u: AuthUser) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-    setUser(u);
+  const handleLogin = (u: AuthUser & { mustChangePassword: boolean }) => {
+    const { mustChangePassword, ...profile } = u;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    setUser(profile);
+    setMustChange(mustChangePassword);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
+    setMustChange(false);
   };
 
   if (!ready) return null;
   if (!user) return <LoginView onLogin={handleLogin} />;
+  if (mustChange)
+    return <ChangePassword forced onDone={() => setMustChange(false)} />;
+  if (showChange)
+    return (
+      <ChangePassword
+        onDone={() => setShowChange(false)}
+        onCancel={() => setShowChange(false)}
+      />
+    );
 
   return (
     <Dashboard
@@ -41,6 +75,7 @@ const Index = () => {
       userEmail={`${user.name} (${user.mobile})`}
       isAdmin={user.isAdmin}
       userMobile={user.mobile}
+      onChangePassword={() => setShowChange(true)}
     />
   );
 };
