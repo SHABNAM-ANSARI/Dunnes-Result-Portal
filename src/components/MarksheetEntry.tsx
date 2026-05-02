@@ -160,7 +160,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
 
   const saveStudent = async (student: Student) => {
     setSavingKey(student.grNo);
-    const rows = [
+    const marksData = [
       ...regularSubjects.map((sub) => ({
         class_name: selectedClass,
         term: selectedTerm,
@@ -186,7 +186,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     ];
     const { error } = await supabase
       .from("marks")
-      .upsert(rows, { onConflict: "class_name,term,gr_no,subject" });
+      .upsert(marksData, { onConflict: "class_name,term,gr_no,subject" });
     setSavingKey("");
     if (error) {
       console.error(error);
@@ -221,19 +221,20 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
   };
 
   const persistRemarks = async (student: Student, row: RemarksRow) => {
-    const { error } = await supabase.from("student_term_remarks").upsert(
-      {
-        class_name: selectedClass,
-        term: selectedTerm,
-        gr_no: student.grNo,
-        student_name: student.name,
-        remarks: row.remarks,
-        teacher_signature: row.teacherSignature,
-        principal_signature: row.principalSignature,
-        entered_by_mobile: userMobile || null,
-      },
-      { onConflict: "class_name,term,gr_no" },
-    );
+    const remarksData = {
+      class_name: selectedClass,
+      term: selectedTerm,
+      gr_no: student.grNo,
+      student_name: student.name,
+      remarks: row.remarks,
+      teacher_signature: row.teacherSignature,
+      principal_signature: row.principalSignature,
+      entered_by_mobile: userMobile || null,
+    };
+
+    const { error } = await supabase
+      .from("student_term_remarks")
+      .upsert(remarksData, { onConflict: "class_name,term,gr_no" });
     if (error) {
       console.error(error);
       toast.error(`Could not save remarks for ${student.name}`);
