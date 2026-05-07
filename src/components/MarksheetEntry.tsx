@@ -47,6 +47,8 @@ const getGrade = (percentage: number): string => {
 };
 
 const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEntryProps) => {
+  const [currentTerm, setCurrentTerm] = useState(selectedTerm);
+  useEffect(() => { setCurrentTerm(selectedTerm); }, [selectedTerm]);
   const subjects: SubjectDef[] = useMemo(() => getSubjectsForClass(selectedClass), [selectedClass]);
   const regularSubjects = useMemo(() => subjects.filter((s) => s.type === "regular"), [subjects]);
   const creditSubjects = useMemo(() => subjects.filter((s) => s.type === "credit"), [subjects]);
