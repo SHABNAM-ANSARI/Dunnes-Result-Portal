@@ -222,7 +222,7 @@ const ResultCard = ({
         </div>
 
         {/* Attendance / Promoted To / Reopens On */}
-        <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-black py-2">
+        <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-2">
           <DottedField label="Attendance" width="w-28" />
           <DottedField label="Promoted To" width="w-28" />
           <DottedField label="School Reopens On" width="w-28" />
@@ -234,15 +234,15 @@ const ResultCard = ({
             <div className="h-10 flex items-end justify-center italic">
               {teacherSignature || classTeacher || ""}
             </div>
-            <div className="border-t border-black pt-0.5 font-bold uppercase">Teacher's Signature</div>
+            <div className="border-t border-primary pt-0.5 font-bold uppercase">Teacher's Signature</div>
           </div>
           <div>
             <div className="h-10" />
-            <div className="border-t border-black pt-0.5 font-bold uppercase">Parent's Signature</div>
+            <div className="border-t border-primary pt-0.5 font-bold uppercase">Parent's Signature</div>
           </div>
           <div>
             <img src={signature} alt="Principal" className="h-10 mx-auto" />
-            <div className="border-t border-black pt-0.5 font-bold uppercase">
+            <div className="border-t border-primary pt-0.5 font-bold uppercase">
               {principalSignature || "Principal's Signature"}
             </div>
           </div>
