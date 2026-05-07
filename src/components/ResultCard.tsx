@@ -94,9 +94,7 @@ const ResultCard = ({
             page-break-after: avoid;
             page-break-inside: avoid;
             overflow: hidden;
-            color: #000 !important;
           }
-          .result-card-print * { color: #000 !important; }
           .no-print { display: none !important; }
         }
       `}</style>
