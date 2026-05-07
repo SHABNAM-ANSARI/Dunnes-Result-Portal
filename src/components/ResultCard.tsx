@@ -1,3 +1,4 @@
+import { useState } from "react";
 import signature from "@/assets/principal-signature.png";
 import DunnesHeader from "./DunnesHeader";
 import {
@@ -29,7 +30,10 @@ interface ResultCardProps {
   remarks: string;
   teacherSignature: string;
   principalSignature: string;
+  onTermChange?: (term: string) => void;
 }
+
+const TERMS = ["Term 1", "Term 2", "Term 3"];
 
 const getOverallGrade = (pct: number): string => {
   if (pct >= 90) return "A+";
@@ -41,10 +45,15 @@ const getOverallGrade = (pct: number): string => {
   return "E";
 };
 
-/**
- * Single-page A4 LANDSCAPE result card.
- * Tight spacing + small fonts so it never spills onto a second page.
- */
+const DottedField = ({ label, width = "w-32" }: { label: string; width?: string }) => (
+  <div className="flex items-end gap-1">
+    <span className="font-bold text-black whitespace-nowrap">{label}:</span>
+    <span
+      className={`${width} inline-block border-b border-dotted border-black h-4`}
+    />
+  </div>
+);
+
 const ResultCard = ({
   student,
   className,
@@ -55,16 +64,23 @@ const ResultCard = ({
   remarks,
   teacherSignature,
   principalSignature,
+  onTermChange,
 }: ResultCardProps) => {
+  const [activeTerm, setActiveTerm] = useState(term);
+
   const total = computeTotal(student.marks, regularSubjects);
   const max = computeMaxTotal(regularSubjects);
   const pct = computePercentage(student.marks, regularSubjects);
   const overall = getOverallGrade(pct);
   const result = getOverallResult(student.marks, regularSubjects);
 
+  const handleTerm = (t: string) => {
+    setActiveTerm(t);
+    onTermChange?.(t);
+  };
+
   return (
     <>
-      {/* Force ONE A4 landscape page on print + scale to fit */}
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 8mm; }
@@ -78,12 +94,32 @@ const ResultCard = ({
             page-break-after: avoid;
             page-break-inside: avoid;
             overflow: hidden;
+            color: #000 !important;
           }
+          .result-card-print * { color: #000 !important; }
+          .no-print { display: none !important; }
         }
       `}</style>
 
+      {/* Term navigation tabs */}
+      <div className="no-print flex items-center justify-center gap-2 mb-3 print:hidden">
+        {TERMS.map((t) => (
+          <button
+            key={t}
+            onClick={() => handleTerm(t)}
+            className={`px-4 py-1.5 rounded-md text-xs font-bold border-2 transition ${
+              activeTerm === t
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-primary border-primary/40 hover:bg-primary/10"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
       <div
-        className="result-card-print border-2 border-primary rounded-xl p-4 shadow-xl bg-card print:shadow-none print:border-primary text-[11px] leading-tight"
+        className="result-card-print border-2 border-black rounded-xl p-4 shadow-xl bg-white print:shadow-none text-[11px] leading-tight text-black"
         style={{ minHeight: "194mm" }}
       >
         <div className="scale-90 origin-top">
@@ -91,32 +127,34 @@ const ResultCard = ({
         </div>
 
         <div className="text-center -mt-2 mb-2">
-          <div className="inline-block px-3 py-0.5 bg-primary text-primary-foreground text-[11px] font-black uppercase tracking-wider rounded">
-            Result Card – {term} • {className}
+          <div className="inline-block px-3 py-0.5 bg-black text-white text-[11px] font-black uppercase tracking-wider rounded">
+            Result Card – {activeTerm} • {className}
           </div>
         </div>
 
-        {/* Student info bar — compact */}
-        <div className="grid grid-cols-5 gap-2 text-[10px] border border-primary/40 rounded p-1.5 mb-2 bg-primary/5">
-          <div><span className="text-muted-foreground">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
-          <div><span className="text-muted-foreground">GR: </span><span className="font-bold">{student.grNo}</span></div>
-          <div><span className="text-muted-foreground">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
-          <div><span className="text-muted-foreground">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
-          <div><span className="text-muted-foreground">Result: </span><span className={`font-black ${result === "PASS" ? "text-primary" : "text-destructive"}`}>{result}</span></div>
+        {/* Student info bar */}
+        <div className="grid grid-cols-5 gap-2 text-[10px] border border-black rounded p-1.5 mb-2">
+          <div><span className="text-black">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
+          <div><span className="text-black">GR: </span><span className="font-bold">{student.grNo}</span></div>
+          <div><span className="text-black">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
+          <div><span className="text-black">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
+          <div><span className="text-black">Result: </span><span className="font-black">{result}</span></div>
         </div>
 
         {/* Two-column subjects layout */}
         <div className="grid grid-cols-2 gap-3">
           {/* Scholastic */}
           <div>
-            <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">Scholastic Areas (Pass = {PASSING_MARKS}/100)</h3>
-            <table className="w-full border border-primary/50 text-[10px]">
+            <h3 className="font-bold text-black text-[11px] mb-1 uppercase">
+              Scholastic Areas (Pass = {PASSING_MARKS}/{MAX_MARKS})
+            </h3>
+            <table className="w-full border border-black text-[10px]">
               <thead>
-                <tr className="bg-primary text-primary-foreground">
-                  <th className="border border-primary/40 px-1 py-0.5 text-left">Subject</th>
-                  <th className="border border-primary/40 px-1 py-0.5 w-12">Marks</th>
-                  <th className="border border-primary/40 px-1 py-0.5 w-10">Max</th>
-                  <th className="border border-primary/40 px-1 py-0.5 w-10">P/F</th>
+                <tr className="bg-black text-white">
+                  <th className="border border-black px-1 py-0.5 text-left">Subject</th>
+                  <th className="border border-black px-1 py-0.5 w-12">Marks</th>
+                  <th className="border border-black px-1 py-0.5 w-10">Max</th>
+                  <th className="border border-black px-1 py-0.5 w-10">P/F</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,90 +163,97 @@ const ResultCard = ({
                   const pass = m >= PASSING_MARKS;
                   return (
                     <tr key={sub.name}>
-                      <td className="border border-primary/30 px-1 py-0.5 uppercase">{sub.name}</td>
-                      <td className="border border-primary/30 px-1 py-0.5 text-center font-semibold">{m}</td>
-                      <td className="border border-primary/30 px-1 py-0.5 text-center text-muted-foreground">{MAX_MARKS}</td>
-                      <td className={`border border-primary/30 px-1 py-0.5 text-center font-bold ${pass ? "text-primary" : "text-destructive"}`}>{pass ? "P" : "F"}</td>
+                      <td className="border border-black px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-black px-1 py-0.5 text-center font-semibold">{m}</td>
+                      <td className="border border-black px-1 py-0.5 text-center">{MAX_MARKS}</td>
+                      <td className="border border-black px-1 py-0.5 text-center font-bold">{pass ? "P" : "F"}</td>
                     </tr>
                   );
                 })}
-                <tr className="bg-primary/10 font-black">
-                  <td className="border border-primary/40 px-1 py-0.5">TOTAL</td>
-                  <td className="border border-primary/40 px-1 py-0.5 text-center">{total}</td>
-                  <td className="border border-primary/40 px-1 py-0.5 text-center">{max}</td>
-                  <td className="border border-primary/40 px-1 py-0.5 text-center">—</td>
+                <tr className="font-black bg-gray-100">
+                  <td className="border border-black px-1 py-0.5">TOTAL</td>
+                  <td className="border border-black px-1 py-0.5 text-center">{total}</td>
+                  <td className="border border-black px-1 py-0.5 text-center">{max}</td>
+                  <td className="border border-black px-1 py-0.5 text-center">—</td>
                 </tr>
               </tbody>
             </table>
 
             <div className="grid grid-cols-3 gap-1 mt-1 text-[10px]">
-              <div className="border border-primary/40 rounded px-1 py-0.5 text-center bg-primary/5">
-                <div className="text-muted-foreground text-[9px]">Total</div>
-                <div className="font-black text-primary">{total}/{max}</div>
+              <div className="border border-black rounded px-1 py-0.5 text-center">
+                <div className="text-black text-[9px]">Total</div>
+                <div className="font-black">{total}/{max}</div>
               </div>
-              <div className="border border-primary/40 rounded px-1 py-0.5 text-center bg-primary/5">
-                <div className="text-muted-foreground text-[9px]">Percentage</div>
-                <div className="font-black text-primary">{pct.toFixed(1)}%</div>
+              <div className="border border-black rounded px-1 py-0.5 text-center">
+                <div className="text-black text-[9px]">Percentage</div>
+                <div className="font-black">{pct.toFixed(1)}%</div>
               </div>
-              <div className="border border-primary/40 rounded px-1 py-0.5 text-center bg-primary/5">
-                <div className="text-muted-foreground text-[9px]">Grade</div>
-                <div className="font-black text-primary">{overall}</div>
+              <div className="border border-black rounded px-1 py-0.5 text-center">
+                <div className="text-black text-[9px]">Grade</div>
+                <div className="font-black">{overall}</div>
               </div>
             </div>
           </div>
 
           {/* Co-Scholastic */}
           <div>
-            <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">Co-Scholastic Areas (Grade)</h3>
-            <table className="w-full border border-primary/50 text-[10px]">
+            <h3 className="font-bold text-black text-[11px] mb-1 uppercase">Co-Scholastic Areas (Grade)</h3>
+            <table className="w-full border border-black text-[10px]">
               <thead>
-                <tr className="bg-accent text-accent-foreground">
-                  <th className="border border-primary/40 px-1 py-0.5 text-left">Subject</th>
-                  <th className="border border-primary/40 px-1 py-0.5 w-14">Grade</th>
+                <tr className="bg-black text-white">
+                  <th className="border border-black px-1 py-0.5 text-left">Subject</th>
+                  <th className="border border-black px-1 py-0.5 w-14">Grade</th>
                 </tr>
               </thead>
               <tbody>
                 {creditSubjects.map((sub) => (
                   <tr key={sub.name}>
-                    <td className="border border-primary/30 px-1 py-0.5 uppercase">{sub.name}</td>
-                    <td className="border border-primary/30 px-1 py-0.5 text-center font-bold">{student.grades[sub.name] || "—"}</td>
+                    <td className="border border-black px-1 py-0.5 uppercase">{sub.name}</td>
+                    <td className="border border-black px-1 py-0.5 text-center font-bold">{student.grades[sub.name] || "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             {/* Remarks block */}
-            <div className="mt-2 border border-primary/40 rounded px-1.5 py-1 bg-card text-[10px]" style={{ minHeight: "3.2rem" }}>
-              <div className="font-bold text-primary text-[9px] uppercase mb-0.5">Teacher's Remarks</div>
-              <div className="whitespace-pre-wrap text-foreground leading-snug">
-                {remarks || <em className="text-muted-foreground">—</em>}
+            <div className="mt-2 border border-black rounded px-1.5 py-1 text-[10px]" style={{ minHeight: "3.2rem" }}>
+              <div className="font-bold text-black text-[9px] uppercase mb-0.5">Teacher's Remarks</div>
+              <div className="whitespace-pre-wrap leading-snug">
+                {remarks || <em>—</em>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Signatures — three columns at bottom */}
+        {/* Attendance / Promoted To / Reopens On */}
+        <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-black py-2">
+          <DottedField label="Attendance" width="w-28" />
+          <DottedField label="Promoted To" width="w-28" />
+          <DottedField label="School Reopens On" width="w-28" />
+        </div>
+
+        {/* Signatures */}
         <div className="mt-3 grid grid-cols-3 gap-4 text-center text-[10px]">
           <div>
-            <div className="h-10 flex items-end justify-center italic text-foreground">
+            <div className="h-10 flex items-end justify-center italic">
               {teacherSignature || classTeacher || ""}
             </div>
-            <div className="border-t border-foreground pt-0.5 font-bold uppercase">Teacher's Signature</div>
+            <div className="border-t border-black pt-0.5 font-bold uppercase">Teacher's Signature</div>
           </div>
           <div>
             <div className="h-10" />
-            <div className="border-t border-foreground pt-0.5 font-bold uppercase">Parent's Signature</div>
+            <div className="border-t border-black pt-0.5 font-bold uppercase">Parent's Signature</div>
           </div>
           <div>
-            <img src={signature} alt="Principal" className="h-10 mx-auto opacity-70" />
-            <div className="border-t border-foreground pt-0.5 font-bold uppercase">
+            <img src={signature} alt="Principal" className="h-10 mx-auto" />
+            <div className="border-t border-black pt-0.5 font-bold uppercase">
               {principalSignature || "Principal's Signature"}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 text-center print:hidden">
+      <div className="mt-3 text-center print:hidden no-print">
         <button
           onClick={() => window.print()}
           className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-bold text-sm hover:bg-primary/90 transition"
