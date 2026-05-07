@@ -615,6 +615,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
             student={previewStudent}
             className={selectedClass}
             term={currentTerm}
+            onTermChange={setCurrentTerm}
             classTeacher={classTeacher}
             regularSubjects={regularSubjects}
             creditSubjects={creditSubjects}
