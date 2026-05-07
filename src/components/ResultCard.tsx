@@ -47,9 +47,9 @@ const getOverallGrade = (pct: number): string => {
 
 const DottedField = ({ label, width = "w-32" }: { label: string; width?: string }) => (
   <div className="flex items-end gap-1">
-    <span className="font-bold text-black whitespace-nowrap">{label}:</span>
+    <span className="font-bold text-primary whitespace-nowrap">{label}:</span>
     <span
-      className={`${width} inline-block border-b border-dotted border-black h-4`}
+      className={`${width} inline-block border-b border-dotted border-primary h-4`}
     />
   </div>
 );
