@@ -32,7 +32,7 @@ interface RemarksRow {
 
 interface MarksheetEntryProps {
   selectedClass: string;
-  selectedTerm: string;
+  currentTerm: string;
   userMobile?: string;
 }
 
@@ -46,9 +46,9 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
-const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEntryProps) => {
-  const [currentTerm, setCurrentTerm] = useState(selectedTerm);
-  useEffect(() => { setCurrentTerm(selectedTerm); }, [selectedTerm]);
+const MarksheetEntry = ({ selectedClass, currentTerm, userMobile }: MarksheetEntryProps) => {
+  const [currentTerm, setCurrentTerm] = useState(currentTerm);
+  useEffect(() => { setCurrentTerm(currentTerm); }, [currentTerm]);
   const subjects: SubjectDef[] = useMemo(() => getSubjectsForClass(selectedClass), [selectedClass]);
   const regularSubjects = useMemo(() => subjects.filter((s) => s.type === "regular"), [subjects]);
   const creditSubjects = useMemo(() => subjects.filter((s) => s.type === "credit"), [subjects]);
@@ -88,12 +88,12 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
           .from("marks")
           .select("gr_no, subject, marks, grade")
           .eq("class_name", selectedClass)
-          .eq("term", selectedTerm),
+          .eq("term", currentTerm),
         supabase
           .from("student_term_remarks")
           .select("gr_no, remarks, teacher_signature, principal_signature")
           .eq("class_name", selectedClass)
-          .eq("term", selectedTerm),
+          .eq("term", currentTerm),
       ]);
 
       if (cancelled) return;
@@ -141,7 +141,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     return () => {
       cancelled = true;
     };
-  }, [selectedClass, selectedTerm, baseStudents]);
+  }, [selectedClass, currentTerm, baseStudents]);
 
   const updateMark = (grNo: string, subject: SubjectDef, value: number) => {
     const clamped = Math.min(MAX_MARKS, Math.max(0, value));
@@ -165,7 +165,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
     const marksData = [
       ...regularSubjects.map((sub) => ({
         class_name: selectedClass,
-        term: selectedTerm,
+        term: currentTerm,
         gr_no: student.grNo,
         student_name: student.name,
         subject: sub.name,
@@ -177,7 +177,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
         .filter((sub) => student.grades[sub.name])
         .map((sub) => ({
           class_name: selectedClass,
-          term: selectedTerm,
+          term: currentTerm,
           gr_no: student.grNo,
           student_name: student.name,
           subject: sub.name,
@@ -225,7 +225,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
   const persistRemarks = async (student: Student, row: RemarksRow) => {
     const remarksData = {
       class_name: selectedClass,
-      term: selectedTerm,
+      term: currentTerm,
       gr_no: student.grNo,
       student_name: student.name,
       remarks: row.remarks,
@@ -271,7 +271,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
         <div className="flex items-center gap-3 text-sm font-bold text-primary">
           <span>CLASS: {selectedClass}</span>
           <span>•</span>
-          <span>TERM: {selectedTerm}</span>
+          <span>TERM: {currentTerm}</span>
           <span>•</span>
           <span>{students.length} students</span>
         </div>
@@ -614,7 +614,7 @@ const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEn
           <ResultCard
             student={previewStudent}
             className={selectedClass}
-            term={selectedTerm}
+            term={currentTerm}
             classTeacher={classTeacher}
             regularSubjects={regularSubjects}
             creditSubjects={creditSubjects}
