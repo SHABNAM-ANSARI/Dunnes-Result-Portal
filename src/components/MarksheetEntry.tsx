@@ -32,7 +32,7 @@ interface RemarksRow {
 
 interface MarksheetEntryProps {
   selectedClass: string;
-  currentTerm: string;
+  selectedTerm: string;
   userMobile?: string;
 }
 
@@ -46,9 +46,9 @@ const getGrade = (percentage: number): string => {
   return "E";
 };
 
-const MarksheetEntry = ({ selectedClass, currentTerm, userMobile }: MarksheetEntryProps) => {
-  const [currentTerm, setCurrentTerm] = useState(currentTerm);
-  useEffect(() => { setCurrentTerm(currentTerm); }, [currentTerm]);
+const MarksheetEntry = ({ selectedClass, selectedTerm, userMobile }: MarksheetEntryProps) => {
+  const [currentTerm, setCurrentTerm] = useState(selectedTerm);
+  useEffect(() => { setCurrentTerm(selectedTerm); }, [selectedTerm]);
   const subjects: SubjectDef[] = useMemo(() => getSubjectsForClass(selectedClass), [selectedClass]);
   const regularSubjects = useMemo(() => subjects.filter((s) => s.type === "regular"), [subjects]);
   const creditSubjects = useMemo(() => subjects.filter((s) => s.type === "credit"), [subjects]);
