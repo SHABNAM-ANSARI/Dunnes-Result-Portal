@@ -344,29 +344,32 @@ const ResultCard = ({
         </div>
         )}
 
-        {/* Attendance / Promoted To / Reopens On */}
-        <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-2">
-          <DottedField label="Attendance" width="w-28" />
-          <DottedField label="Promoted To" width="w-28" />
-          <DottedField label="School Reopens On" width="w-28" />
-        </div>
+        {/* Footer pinned to bottom: Attendance / Promoted / Signatures */}
+        <div className="mt-auto pt-6">
+          {/* Attendance / Promoted To / Reopens On */}
+          <div className="grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-3">
+            <DottedField label="Attendance" width="w-28" />
+            <DottedField label="Promoted To" width="w-28" />
+            <DottedField label="School Reopens On" width="w-28" />
+          </div>
 
-        {/* Signatures */}
-        <div className="mt-3 grid grid-cols-3 gap-4 text-center text-[10px]">
-          <div>
-            <div className="h-10 flex items-end justify-center italic">
-              {teacherSignature || classTeacher || ""}
+          {/* Signatures */}
+          <div className="mt-8 grid grid-cols-3 gap-6 text-center text-[10px] items-end">
+            <div>
+              <div className="h-14 flex items-end justify-center italic">
+                {teacherSignature || classTeacher || ""}
+              </div>
+              <div className="border-t border-primary pt-1 font-bold uppercase">Teacher's Signature</div>
             </div>
-            <div className="border-t border-primary pt-0.5 font-bold uppercase">Teacher's Signature</div>
-          </div>
-          <div>
-            <div className="h-10" />
-            <div className="border-t border-primary pt-0.5 font-bold uppercase">Parent's Signature</div>
-          </div>
-          <div>
-            <img src={signature} alt="Principal" className="h-10 mx-auto" />
-            <div className="border-t border-primary pt-0.5 font-bold uppercase">
-              {principalSignature || "Principal's Signature"}
+            <div>
+              <div className="h-14" />
+              <div className="border-t border-primary pt-1 font-bold uppercase">Parent's Signature</div>
+            </div>
+            <div>
+              <img src={signature} alt="Principal" className="h-14 mx-auto object-contain" />
+              <div className="border-t border-primary pt-1 font-bold uppercase">
+                {principalSignature || "Principal's Signature"}
+              </div>
             </div>
           </div>
         </div>
