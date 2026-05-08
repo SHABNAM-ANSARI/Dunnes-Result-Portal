@@ -149,7 +149,7 @@ const ResultCard = ({
       </div>
 
       <div
-        className="result-card-print border-2 border-primary rounded-xl p-4 shadow-xl bg-white print:shadow-none text-[11px] leading-tight text-primary"
+        className="result-card-print border-2 border-primary rounded-xl p-4 shadow-xl bg-white print:shadow-none text-[11px] leading-tight text-primary flex flex-col"
         style={{ minHeight: "194mm" }}
       >
         <div className="scale-90 origin-top">
