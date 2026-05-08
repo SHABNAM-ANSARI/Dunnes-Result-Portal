@@ -69,6 +69,7 @@ const ResultCard = ({
 }: ResultCardProps) => {
   const [activeTerm, setActiveTerm] = useState(term);
   const [summaryMarks, setSummaryMarks] = useState<Record<string, Record<string, number>>>({});
+  const [summaryGrades, setSummaryGrades] = useState<Record<string, Record<string, string>>>({});
 
   const total = computeTotal(student.marks, regularSubjects);
   const max = computeMaxTotal(regularSubjects);
