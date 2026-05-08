@@ -23,8 +23,8 @@ const DunnesHeader = () => {
       </p>
       
       {/* Progress Report Banner */}
-      <div className="mt-2 bg-slate-900 text-white py-0.5 px-6 inline-block rounded-full font-bold text-[11px]">
-        PROGRESS REPORT FOR THE ACADEMIC YEAR 2025-2026
+      <div className="mt-2 bg-primary text-primary-foreground py-0.5 px-6 inline-block rounded-full font-bold text-[11px]">
+        Progress Report for the Academic year 2026-27
       </div>
     </div>
   );

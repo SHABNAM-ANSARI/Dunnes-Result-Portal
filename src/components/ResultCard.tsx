@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import signature from "@/assets/principal-signature.png";
 import DunnesHeader from "./DunnesHeader";
 import {
@@ -33,7 +34,7 @@ interface ResultCardProps {
   onTermChange?: (term: string) => void;
 }
 
-const TERMS = ["Term 1", "Term 2", "Term 3"];
+const TERMS = ["Term 1", "Term 2", "Term 3", "Result Summary"];
 
 const getOverallGrade = (pct: number): string => {
   if (pct >= 90) return "A+";
@@ -67,6 +68,7 @@ const ResultCard = ({
   onTermChange,
 }: ResultCardProps) => {
   const [activeTerm, setActiveTerm] = useState(term);
+  const [summaryMarks, setSummaryMarks] = useState<Record<string, Record<string, number>>>({});
 
   const total = computeTotal(student.marks, regularSubjects);
   const max = computeMaxTotal(regularSubjects);
@@ -76,15 +78,39 @@ const ResultCard = ({
 
   const handleTerm = (t: string) => {
     setActiveTerm(t);
-    onTermChange?.(t);
+    if (t !== "Result Summary") onTermChange?.(t);
   };
+
+  // Fetch all 3 terms when Result Summary tab is opened
+  useEffect(() => {
+    if (activeTerm !== "Result Summary") return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("marks")
+        .select("term, subject, marks")
+        .eq("class_name", className)
+        .eq("gr_no", student.grNo);
+      if (cancelled || error || !data) return;
+      const map: Record<string, Record<string, number>> = {
+        "Term 1": {}, "Term 2": {}, "Term 3": {},
+      };
+      data.forEach((row: any) => {
+        if (row.marks == null) return;
+        if (!map[row.term]) map[row.term] = {};
+        map[row.term][row.subject] = row.marks;
+      });
+      setSummaryMarks(map);
+    })();
+    return () => { cancelled = true; };
+  }, [activeTerm, className, student.grNo]);
 
   return (
     <>
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 8mm; }
-          html, body { width: 297mm; height: 210mm; }
+          html, body { width: 297mm; height: 210mm; overflow: hidden; }
           body * { visibility: hidden; }
           .result-card-print, .result-card-print * { visibility: visible; }
           .result-card-print {
@@ -124,16 +150,72 @@ const ResultCard = ({
           <DunnesHeader />
         </div>
 
-        {/* Student info bar */}
-        <div className="grid grid-cols-5 gap-2 text-[10px] border border-primary rounded p-1.5 mb-2">
-          <div><span className="text-primary">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
-          <div><span className="text-primary">GR: </span><span className="font-bold">{student.grNo}</span></div>
-          <div><span className="text-primary">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
-          <div><span className="text-primary">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
-          <div><span className="text-primary">Term: </span><span className="font-black uppercase">{activeTerm}</span></div>
+        {/* Student info bar — single line, no wrap */}
+        <div className="flex flex-nowrap items-center gap-3 text-[10px] border border-primary rounded p-1.5 mb-2 whitespace-nowrap overflow-hidden">
+          <div className="flex-1 min-w-0 truncate"><span className="text-primary">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
+          <div className="shrink-0"><span className="text-primary">GR: </span><span className="font-bold">{student.grNo}</span></div>
+          <div className="shrink-0"><span className="text-primary">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
+          <div className="flex-1 min-w-0 truncate"><span className="text-primary">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
+          <div className="shrink-0"><span className="text-primary">Term: </span><span className="font-black uppercase">{activeTerm}</span></div>
         </div>
 
-        {/* Two-column subjects layout */}
+        {activeTerm === "Result Summary" ? (
+          <div>
+            <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">
+              Annual Result Summary (All Terms Consolidated)
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject Name</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 1</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 2</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 3</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Grand Total</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Annual Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regularSubjects.map((sub) => {
+                  const t1 = Number(summaryMarks["Term 1"]?.[sub.name]) || 0;
+                  const t2 = Number(summaryMarks["Term 2"]?.[sub.name]) || 0;
+                  const t3 = Number(summaryMarks["Term 3"]?.[sub.name]) || 0;
+                  const grand = t1 + t2 + t3;
+                  const subjPct = (grand / (MAX_MARKS * 3)) * 100;
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{grand}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-black">{getOverallGrade(subjPct)}</td>
+                    </tr>
+                  );
+                })}
+                {(() => {
+                  const sum = (term: string) =>
+                    regularSubjects.reduce((a, s) => a + (Number(summaryMarks[term]?.[s.name]) || 0), 0);
+                  const t1 = sum("Term 1"), t2 = sum("Term 2"), t3 = sum("Term 3");
+                  const grand = t1 + t2 + t3;
+                  const maxAll = MAX_MARKS * regularSubjects.length * 3;
+                  const annualPct = maxAll > 0 ? (grand / maxAll) * 100 : 0;
+                  return (
+                    <tr className="font-black bg-primary/10">
+                      <td className="border border-primary px-1 py-0.5">GRAND TOTAL</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{grand}/{maxAll}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{getOverallGrade(annualPct)} ({annualPct.toFixed(1)}%)</td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+        /* Two-column subjects layout */
         <div className="grid grid-cols-2 gap-3">
           {/* Scholastic */}
           <div>
@@ -220,6 +302,7 @@ const ResultCard = ({
             </div>
           </div>
         </div>
+        )}
 
         {/* Attendance / Promoted To / Reopens On */}
         <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-2">
