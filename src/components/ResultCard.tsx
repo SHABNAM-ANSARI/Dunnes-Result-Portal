@@ -302,6 +302,7 @@ const ResultCard = ({
             </div>
           </div>
         </div>
+        )}
 
         {/* Attendance / Promoted To / Reopens On */}
         <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-2">
