@@ -110,7 +110,7 @@ const ResultCard = ({
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 8mm; }
-          html, body { width: 297mm; height: 210mm; }
+          html, body { width: 297mm; height: 210mm; overflow: hidden; }
           body * { visibility: hidden; }
           .result-card-print, .result-card-print * { visibility: visible; }
           .result-card-print {
