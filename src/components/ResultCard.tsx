@@ -89,19 +89,24 @@ const ResultCard = ({
     (async () => {
       const { data, error } = await supabase
         .from("marks")
-        .select("term, subject, marks")
+        .select("term, subject, marks, grade")
         .eq("class_name", className)
         .eq("gr_no", student.grNo);
       if (cancelled || error || !data) return;
       const map: Record<string, Record<string, number>> = {
         "Term 1": {}, "Term 2": {}, "Term 3": {},
       };
+      const gmap: Record<string, Record<string, string>> = {
+        "Term 1": {}, "Term 2": {}, "Term 3": {},
+      };
       data.forEach((row: any) => {
-        if (row.marks == null) return;
         if (!map[row.term]) map[row.term] = {};
-        map[row.term][row.subject] = row.marks;
+        if (!gmap[row.term]) gmap[row.term] = {};
+        if (row.marks != null) map[row.term][row.subject] = row.marks;
+        if (row.grade) gmap[row.term][row.subject] = row.grade;
       });
       setSummaryMarks(map);
+      setSummaryGrades(gmap);
     })();
     return () => { cancelled = true; };
   }, [activeTerm, className, student.grNo]);
