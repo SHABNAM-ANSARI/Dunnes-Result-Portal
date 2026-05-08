@@ -68,6 +68,7 @@ const ResultCard = ({
   onTermChange,
 }: ResultCardProps) => {
   const [activeTerm, setActiveTerm] = useState(term);
+  const [summaryMarks, setSummaryMarks] = useState<Record<string, Record<string, number>>>({});
 
   const total = computeTotal(student.marks, regularSubjects);
   const max = computeMaxTotal(regularSubjects);
@@ -77,8 +78,32 @@ const ResultCard = ({
 
   const handleTerm = (t: string) => {
     setActiveTerm(t);
-    onTermChange?.(t);
+    if (t !== "Result Summary") onTermChange?.(t);
   };
+
+  // Fetch all 3 terms when Result Summary tab is opened
+  useEffect(() => {
+    if (activeTerm !== "Result Summary") return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("marks")
+        .select("term, subject, marks")
+        .eq("class_name", className)
+        .eq("gr_no", student.grNo);
+      if (cancelled || error || !data) return;
+      const map: Record<string, Record<string, number>> = {
+        "Term 1": {}, "Term 2": {}, "Term 3": {},
+      };
+      data.forEach((row: any) => {
+        if (row.marks == null) return;
+        if (!map[row.term]) map[row.term] = {};
+        map[row.term][row.subject] = row.marks;
+      });
+      setSummaryMarks(map);
+    })();
+    return () => { cancelled = true; };
+  }, [activeTerm, className, student.grNo]);
 
   return (
     <>
