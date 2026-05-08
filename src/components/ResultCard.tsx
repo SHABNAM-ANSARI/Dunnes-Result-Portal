@@ -69,6 +69,7 @@ const ResultCard = ({
 }: ResultCardProps) => {
   const [activeTerm, setActiveTerm] = useState(term);
   const [summaryMarks, setSummaryMarks] = useState<Record<string, Record<string, number>>>({});
+  const [summaryGrades, setSummaryGrades] = useState<Record<string, Record<string, string>>>({});
 
   const total = computeTotal(student.marks, regularSubjects);
   const max = computeMaxTotal(regularSubjects);
@@ -88,19 +89,24 @@ const ResultCard = ({
     (async () => {
       const { data, error } = await supabase
         .from("marks")
-        .select("term, subject, marks")
+        .select("term, subject, marks, grade")
         .eq("class_name", className)
         .eq("gr_no", student.grNo);
       if (cancelled || error || !data) return;
       const map: Record<string, Record<string, number>> = {
         "Term 1": {}, "Term 2": {}, "Term 3": {},
       };
+      const gmap: Record<string, Record<string, string>> = {
+        "Term 1": {}, "Term 2": {}, "Term 3": {},
+      };
       data.forEach((row: any) => {
-        if (row.marks == null) return;
         if (!map[row.term]) map[row.term] = {};
-        map[row.term][row.subject] = row.marks;
+        if (!gmap[row.term]) gmap[row.term] = {};
+        if (row.marks != null) map[row.term][row.subject] = row.marks;
+        if (row.grade) gmap[row.term][row.subject] = row.grade;
       });
       setSummaryMarks(map);
+      setSummaryGrades(gmap);
     })();
     return () => { cancelled = true; };
   }, [activeTerm, className, student.grNo]);
@@ -143,7 +149,7 @@ const ResultCard = ({
       </div>
 
       <div
-        className="result-card-print border-2 border-primary rounded-xl p-4 shadow-xl bg-white print:shadow-none text-[11px] leading-tight text-primary"
+        className="result-card-print border-2 border-primary rounded-xl p-4 shadow-xl bg-white print:shadow-none text-[11px] leading-tight text-primary flex flex-col"
         style={{ minHeight: "194mm" }}
       >
         <div className="scale-90 origin-top">
@@ -211,6 +217,40 @@ const ResultCard = ({
                     </tr>
                   );
                 })()}
+              </tbody>
+            </table>
+
+            {/* Co-Scholastic subjects across all terms */}
+            <h3 className="font-bold text-primary text-[11px] mt-3 mb-1 uppercase">
+              Co-Scholastic Areas (All Terms)
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject Name</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 1</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 2</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 3</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Annual Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creditSubjects.map((sub) => {
+                  const g1 = summaryGrades["Term 1"]?.[sub.name] || student.grades[sub.name] || "—";
+                  const g2 = summaryGrades["Term 2"]?.[sub.name] || "—";
+                  const g3 = summaryGrades["Term 3"]?.[sub.name] || "—";
+                  // Annual grade = best (most recent non-empty) or last term if available
+                  const annual = [g3, g2, g1].find((g) => g && g !== "—") || "—";
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-black">{annual}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -304,29 +344,32 @@ const ResultCard = ({
         </div>
         )}
 
-        {/* Attendance / Promoted To / Reopens On */}
-        <div className="mt-3 grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-2">
-          <DottedField label="Attendance" width="w-28" />
-          <DottedField label="Promoted To" width="w-28" />
-          <DottedField label="School Reopens On" width="w-28" />
-        </div>
+        {/* Footer pinned to bottom: Attendance / Promoted / Signatures */}
+        <div className="mt-auto pt-6">
+          {/* Attendance / Promoted To / Reopens On */}
+          <div className="grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-3">
+            <DottedField label="Attendance" width="w-28" />
+            <DottedField label="Promoted To" width="w-28" />
+            <DottedField label="School Reopens On" width="w-28" />
+          </div>
 
-        {/* Signatures */}
-        <div className="mt-3 grid grid-cols-3 gap-4 text-center text-[10px]">
-          <div>
-            <div className="h-10 flex items-end justify-center italic">
-              {teacherSignature || classTeacher || ""}
+          {/* Signatures */}
+          <div className="mt-8 grid grid-cols-3 gap-6 text-center text-[10px] items-end">
+            <div>
+              <div className="h-14 flex items-end justify-center italic">
+                {teacherSignature || classTeacher || ""}
+              </div>
+              <div className="border-t border-primary pt-1 font-bold uppercase">Teacher's Signature</div>
             </div>
-            <div className="border-t border-primary pt-0.5 font-bold uppercase">Teacher's Signature</div>
-          </div>
-          <div>
-            <div className="h-10" />
-            <div className="border-t border-primary pt-0.5 font-bold uppercase">Parent's Signature</div>
-          </div>
-          <div>
-            <img src={signature} alt="Principal" className="h-10 mx-auto" />
-            <div className="border-t border-primary pt-0.5 font-bold uppercase">
-              {principalSignature || "Principal's Signature"}
+            <div>
+              <div className="h-14" />
+              <div className="border-t border-primary pt-1 font-bold uppercase">Parent's Signature</div>
+            </div>
+            <div>
+              <img src={signature} alt="Principal" className="h-14 mx-auto object-contain" />
+              <div className="border-t border-primary pt-1 font-bold uppercase">
+                {principalSignature || "Principal's Signature"}
+              </div>
             </div>
           </div>
         </div>
