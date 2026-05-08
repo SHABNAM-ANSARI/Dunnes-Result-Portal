@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import signature from "@/assets/principal-signature.png";
 import { useEffect, useState } from "react";
 import {
@@ -31,6 +33,8 @@ interface ResultCardProps {
   principalSignature: string;
 }
 
+const TERMS = ["Term 1", "Term 2", "Term 3", "Result Summary"];
+
 const getOverallGrade = (pct: number): string => {
   if (pct >= 90) return "A+";
   if (pct >= 80) return "A";
@@ -58,23 +62,9 @@ const ResultCard = ({
   teacherSignature,
   principalSignature,
 }: ResultCardProps) => {
-  console.log("DEBUG - Student Marks:", student.marks);
-  type TermView = "term1" | "term2" | "term3" | "final";
-
-  const parseInitialView = (value: string): TermView => {
-    const t = (value || "").toLowerCase();
-    if (t.includes("term 1") || t.includes("term1") || t === "t1") return "term1";
-    if (t.includes("term 2") || t.includes("term2") || t === "t2") return "term2";
-    if (t.includes("term 3") || t.includes("term3") || t === "t3") return "term3";
-    if (t.includes("final")) return "final";
-    return "final";
-  };
-
-  const [activeView, setActiveView] = useState<TermView>(parseInitialView(term));
-
-  useEffect(() => {
-    setActiveView(parseInitialView(term));
-  }, [term]);
+  const [activeTerm, setActiveTerm] = useState(term);
+  const [summaryMarks, setSummaryMarks] = useState<Record<string, Record<string, number>>>({});
+  const [summaryGrades, setSummaryGrades] = useState<Record<string, Record<string, string>>>({});
 
   const total = computeTotal(student.marks, regularSubjects);
   const max = computeMaxTotal(regularSubjects);
@@ -181,33 +171,46 @@ const ResultCard = ({
   const overall = getOverallGrade(pct);
   const result = getOverallResult(student.marks, regularSubjects);
 
-  const classParts = className.split(/[-\s]+/).filter(Boolean);
-  const standard = classParts[0] ?? "";
-  const section = classParts.slice(1).join(" ") ?? "";
-  const academic_year = `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
-  const exam_type = term;
-  const marksData = [
-    {
-      ...student.marks,
-      academic_year,
-      section,
-      standard,
-      exam_type,
-    },
-  ];
+  const handleTerm = (t: string) => {
+    setActiveTerm(t);
+    if (t !== "Result Summary") onTermChange?.(t);
+  };
+
+  // Fetch all 3 terms when Result Summary tab is opened
+  useEffect(() => {
+    if (activeTerm !== "Result Summary") return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("marks")
+        .select("term, subject, marks, grade")
+        .eq("class_name", className)
+        .eq("gr_no", student.grNo);
+      if (cancelled || error || !data) return;
+      const map: Record<string, Record<string, number>> = {
+        "Term 1": {}, "Term 2": {}, "Term 3": {},
+      };
+      const gmap: Record<string, Record<string, string>> = {
+        "Term 1": {}, "Term 2": {}, "Term 3": {},
+      };
+      data.forEach((row: any) => {
+        if (!map[row.term]) map[row.term] = {};
+        if (!gmap[row.term]) gmap[row.term] = {};
+        if (row.marks != null) map[row.term][row.subject] = row.marks;
+        if (row.grade) gmap[row.term][row.subject] = row.grade;
+      });
+      setSummaryMarks(map);
+      setSummaryGrades(gmap);
+    })();
+    return () => { cancelled = true; };
+  }, [activeTerm, className, student.grNo]);
 
   return (
     <>
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 8mm; }
-          html, body {
-            width: 297mm;
-            height: 210mm;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden !important;
-          }
+          html, body { width: 297mm; height: 210mm; overflow: hidden; }
           body * { visibility: hidden; }
           .result-card-print-shell {
             position: fixed;
@@ -286,118 +289,150 @@ const ResultCard = ({
             ))}
           </div>
 
-          <div className="grid grid-cols-5 gap-2 text-[10px] border border-primary/40 rounded p-1.5 mb-2 bg-primary/5">
-            <div>
-              <span className="text-muted-foreground">Name: </span>
-              <span className="font-bold uppercase">{student.name}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">GR: </span>
-              <span className="font-bold">{student.grNo}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Roll: </span>
-              <span className="font-bold">{student.rollNo}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Class Teacher: </span>
-              <span className="font-bold uppercase">{classTeacher || "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Result: </span>
-              <span className={`font-black ${result === "PASS" ? "text-primary" : "text-destructive"}`}>
-                {result}
-              </span>
-            </div>
-          </div>
+      <div
+        className="result-card-print border-2 border-primary rounded-xl p-4 shadow-xl bg-white print:shadow-none text-[11px] leading-tight text-primary flex flex-col"
+        style={{ minHeight: "194mm" }}
+      >
+        <div className="scale-90 origin-top">
+          <DunnesHeader />
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">
-                Scholastic Areas (Pass = {PASSING_MARKS}/100)
-              </h3>
-              <table className="w-full table-fixed border border-primary/50 text-[10px]">
-                {activeView === "final" ? (
-                  <colgroup>
-                    <col className="w-[40%]" />
-                    <col className="w-[15%]" />
-                    <col className="w-[15%]" />
-                    <col className="w-[15%]" />
-                    <col className="w-[15%]" />
-                  </colgroup>
-                ) : (
-                  <colgroup>
-                    <col className="w-[50%]" />
-                    <col className="w-[25%]" />
-                    <col className="w-[25%]" />
-                  </colgroup>
-                )}
-                <thead>
-                  {activeView === "final" ? (
-                    <tr className="bg-primary text-primary-foreground">
-                      <th className="border border-primary/40 px-1 py-0.5 text-left">Subject Name</th>
-                      <th className="border border-primary/40 px-1 py-0.5 text-center">Term 1</th>
-                      <th className="border border-primary/40 px-1 py-0.5 text-center">Term 2</th>
-                      <th className="border border-primary/40 px-1 py-0.5 text-center">Term 3</th>
-                      <th className="border border-primary/40 px-1 py-0.5 text-center">Grand Total</th>
+        {/* Student info bar — single line, no wrap */}
+        <div className="flex flex-nowrap items-center gap-3 text-[10px] border border-primary rounded p-1.5 mb-2 whitespace-nowrap overflow-hidden">
+          <div className="flex-1 min-w-0 truncate"><span className="text-primary">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
+          <div className="shrink-0"><span className="text-primary">GR: </span><span className="font-bold">{student.grNo}</span></div>
+          <div className="shrink-0"><span className="text-primary">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
+          <div className="flex-1 min-w-0 truncate"><span className="text-primary">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
+          <div className="shrink-0"><span className="text-primary">Term: </span><span className="font-black uppercase">{activeTerm}</span></div>
+        </div>
+
+        {activeTerm === "Result Summary" ? (
+          <div>
+            <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">
+              Annual Result Summary (All Terms Consolidated)
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject Name</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 1</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 2</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 3</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Grand Total</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Annual Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regularSubjects.map((sub) => {
+                  const t1 = Number(summaryMarks["Term 1"]?.[sub.name]) || 0;
+                  const t2 = Number(summaryMarks["Term 2"]?.[sub.name]) || 0;
+                  const t3 = Number(summaryMarks["Term 3"]?.[sub.name]) || 0;
+                  const grand = t1 + t2 + t3;
+                  const subjPct = (grand / (MAX_MARKS * 3)) * 100;
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{grand}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-black">{getOverallGrade(subjPct)}</td>
                     </tr>
-                  ) : (
-                    <tr className="bg-primary text-primary-foreground">
-                      <th className="border border-primary/40 px-1 py-0.5 text-left">Subject Name</th>
-                      <th className="border border-primary/40 px-1 py-0.5 text-center">Marks</th>
-                      <th className="border border-primary/40 px-1 py-0.5 text-center">Result</th>
+                  );
+                })}
+                {(() => {
+                  const sum = (term: string) =>
+                    regularSubjects.reduce((a, s) => a + (Number(summaryMarks[term]?.[s.name]) || 0), 0);
+                  const t1 = sum("Term 1"), t2 = sum("Term 2"), t3 = sum("Term 3");
+                  const grand = t1 + t2 + t3;
+                  const maxAll = MAX_MARKS * regularSubjects.length * 3;
+                  const annualPct = maxAll > 0 ? (grand / maxAll) * 100 : 0;
+                  return (
+                    <tr className="font-black bg-primary/10">
+                      <td className="border border-primary px-1 py-0.5">GRAND TOTAL</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{grand}/{maxAll}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{getOverallGrade(annualPct)} ({annualPct.toFixed(1)}%)</td>
                     </tr>
-                  )}
-                </thead>
-                <tbody>
-                  {activeView === "final"
-                    ? regularSubjects?.map((sub) => {
-                        const t1 = getNumericTermMark(sub.name, 1);
-                        const t2 = getNumericTermMark(sub.name, 2);
-                        const t3 = getNumericTermMark(sub.name, 3);
-                        const subjectTotal = Number(t1) + Number(t2) + Number(t3);
-                        return (
-                          <tr key={sub.name}>
-                            <td className="border border-primary/30 px-1 py-0.5 uppercase">{sub.name}</td>
-                            <td className="border border-primary/30 px-1 py-0.5 text-center font-semibold">{renderTermMark(sub.name, 1)}</td>
-                            <td className="border border-primary/30 px-1 py-0.5 text-center font-semibold">{renderTermMark(sub.name, 2)}</td>
-                            <td className="border border-primary/30 px-1 py-0.5 text-center font-semibold">{renderTermMark(sub.name, 3)}</td>
-                            <td className="border border-primary/30 px-1 py-0.5 text-center font-semibold">{subjectTotal}</td>
-                          </tr>
-                        );
-                      })
-                    : regularSubjects?.map((sub) => {
-                        const mark = getNumericTermMark(sub.name, selectedTermNo);
-                        const subjectResult = mark >= PASSING_MARKS ? "PASS" : "FAIL";
-                        return (
-                          <tr key={sub.name}>
-                            <td className="border border-primary/30 px-1 py-0.5 uppercase">{sub.name}</td>
-                            <td className="border border-primary/30 px-1 py-0.5 text-center font-semibold">{mark || "-"}</td>
-                            <td className={`border border-primary/30 px-1 py-0.5 text-center font-bold ${subjectResult === "PASS" ? "text-primary" : "text-destructive"}`}>
-                              {subjectResult}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  {activeView === "final" ? (
-                    <tr className="bg-primary/10 font-black">
-                      <td className="border border-primary/40 px-1 py-0.5">TOTAL</td>
-                      <td className="border border-primary/40 px-1 py-0.5 text-center">{term1Total}</td>
-                      <td className="border border-primary/40 px-1 py-0.5 text-center">{term2Total}</td>
-                      <td className="border border-primary/40 px-1 py-0.5 text-center">{term3Total}</td>
-                      <td className="border border-primary/40 px-1 py-0.5 text-center">{threeTermTotal}</td>
+                  );
+                })()}
+              </tbody>
+            </table>
+
+            {/* Co-Scholastic subjects across all terms */}
+            <h3 className="font-bold text-primary text-[11px] mt-3 mb-1 uppercase">
+              Co-Scholastic Areas (All Terms)
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject Name</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 1</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 2</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 3</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Annual Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creditSubjects.map((sub) => {
+                  const g1 = summaryGrades["Term 1"]?.[sub.name] || student.grades[sub.name] || "—";
+                  const g2 = summaryGrades["Term 2"]?.[sub.name] || "—";
+                  const g3 = summaryGrades["Term 3"]?.[sub.name] || "—";
+                  // Annual grade = best (most recent non-empty) or last term if available
+                  const annual = [g3, g2, g1].find((g) => g && g !== "—") || "—";
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-black">{annual}</td>
                     </tr>
-                  ) : (
-                    <tr className="bg-primary/10 font-black">
-                      <td className="border border-primary/40 px-1 py-0.5">TOTAL</td>
-                      <td className="border border-primary/40 px-1 py-0.5 text-center">{selectedTermTotal}</td>
-                      <td className={`border border-primary/40 px-1 py-0.5 text-center ${selectedTermResult === "PASS" ? "text-primary" : "text-destructive"}`}>
-                        {selectedTermResult}
-                      </td>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+        /* Two-column subjects layout */
+        <div className="grid grid-cols-2 gap-3">
+          {/* Scholastic */}
+          <div>
+            <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">
+              Scholastic Areas (Pass = {PASSING_MARKS}/{MAX_MARKS})
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject</th>
+                  <th className="border border-primary px-1 py-0.5 w-12">Marks</th>
+                  <th className="border border-primary px-1 py-0.5 w-10">Max</th>
+                  <th className="border border-primary px-1 py-0.5 w-10">P/F</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regularSubjects.map((sub) => {
+                  const m = Number(student.marks[sub.name]) || 0;
+                  const pass = m >= PASSING_MARKS;
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-semibold">{m}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{MAX_MARKS}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{pass ? "P" : "F"}</td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  );
+                })}
+                <tr className="font-black bg-primary/10">
+                  <td className="border border-primary px-1 py-0.5">TOTAL</td>
+                  <td className="border border-primary px-1 py-0.5 text-center">{total}</td>
+                  <td className="border border-primary px-1 py-0.5 text-center">{max}</td>
+                  <td className="border border-primary px-1 py-0.5 text-center">—</td>
+                </tr>
+              </tbody>
+            </table>
 
               <div className="grid grid-cols-3 gap-1 mt-1 text-[10px]">
                 <div className="border border-primary/40 rounded px-1 py-0.5 text-center bg-primary/5">
@@ -450,36 +485,35 @@ const ResultCard = ({
               </div>
             </div>
           </div>
+        </div>
+        )}
 
-          <div className="mt-3 grid grid-cols-3 gap-4 text-center text-[10px] items-end border-t border-primary/40 pt-2">
-            <div className="flex flex-col justify-between h-16">
-              <div className="h-10 flex items-end justify-center italic text-foreground leading-none">
-                {teacherSignature || classTeacher || ""}
-              </div>
-              <div className="border-t border-foreground pt-0.5 font-bold uppercase">Teacher's Signature</div>
-            </div>
-            <div className="flex flex-col justify-between h-16">
-              <div className="h-10 flex items-end justify-center" />
-              <div className="border-t border-foreground pt-0.5 font-bold uppercase">Parent's Signature</div>
-            </div>
-            <div className="flex flex-col justify-between h-16">
-              <div className="h-10 flex items-end justify-center">
-                <img src={signature} alt="Principal" className="h-10 opacity-70" />
-              </div>
-              <div className="border-t border-foreground pt-0.5 font-bold uppercase">
-                {principalSignature || "Principal's Signature"}
-              </div>
-            </div>
+        {/* Footer pinned to bottom: Attendance / Promoted / Signatures */}
+        <div className="mt-auto pt-6">
+          {/* Attendance / Promoted To / Reopens On */}
+          <div className="grid grid-cols-3 gap-4 text-[10px] border-t border-b border-primary py-3">
+            <DottedField label="Attendance" width="w-28" />
+            <DottedField label="Promoted To" width="w-28" />
+            <DottedField label="School Reopens On" width="w-28" />
           </div>
 
-          <div className="mt-1 text-[9px] flex items-center justify-between border-t border-primary/30 pt-1">
+          {/* Signatures */}
+          <div className="mt-8 grid grid-cols-3 gap-6 text-center text-[10px] items-end">
             <div>
-              <span className="text-muted-foreground">School Reopening Date: </span>
-              <span className="font-bold">13th June 2026</span>
+              <div className="h-14 flex items-end justify-center italic">
+                {teacherSignature || classTeacher || ""}
+              </div>
+              <div className="border-t border-primary pt-1 font-bold uppercase">Teacher's Signature</div>
             </div>
             <div>
-              <span className="text-muted-foreground">Attendance: </span>
-              <span className="font-bold">{attendance}</span>
+              <div className="h-14" />
+              <div className="border-t border-primary pt-1 font-bold uppercase">Parent's Signature</div>
+            </div>
+            <div>
+              <img src={signature} alt="Principal" className="h-14 mx-auto object-contain" />
+              <div className="border-t border-primary pt-1 font-bold uppercase">
+                {principalSignature || "Principal's Signature"}
+              </div>
             </div>
           </div>
         </div>
