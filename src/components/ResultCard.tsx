@@ -150,13 +150,13 @@ const ResultCard = ({
           <DunnesHeader />
         </div>
 
-        {/* Student info bar */}
-        <div className="grid grid-cols-5 gap-2 text-[10px] border border-primary rounded p-1.5 mb-2">
-          <div><span className="text-primary">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
-          <div><span className="text-primary">GR: </span><span className="font-bold">{student.grNo}</span></div>
-          <div><span className="text-primary">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
-          <div><span className="text-primary">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
-          <div><span className="text-primary">Term: </span><span className="font-black uppercase">{activeTerm}</span></div>
+        {/* Student info bar — single line, no wrap */}
+        <div className="flex flex-nowrap items-center gap-3 text-[10px] border border-primary rounded p-1.5 mb-2 whitespace-nowrap overflow-hidden">
+          <div className="flex-1 min-w-0 truncate"><span className="text-primary">Name: </span><span className="font-bold uppercase">{student.name}</span></div>
+          <div className="shrink-0"><span className="text-primary">GR: </span><span className="font-bold">{student.grNo}</span></div>
+          <div className="shrink-0"><span className="text-primary">Roll: </span><span className="font-bold">{student.rollNo}</span></div>
+          <div className="flex-1 min-w-0 truncate"><span className="text-primary">Class Teacher: </span><span className="font-bold uppercase">{classTeacher || "—"}</span></div>
+          <div className="shrink-0"><span className="text-primary">Term: </span><span className="font-black uppercase">{activeTerm}</span></div>
         </div>
 
         {/* Two-column subjects layout */}
