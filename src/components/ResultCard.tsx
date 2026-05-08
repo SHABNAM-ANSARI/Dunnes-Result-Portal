@@ -219,6 +219,40 @@ const ResultCard = ({
                 })()}
               </tbody>
             </table>
+
+            {/* Co-Scholastic subjects across all terms */}
+            <h3 className="font-bold text-primary text-[11px] mt-3 mb-1 uppercase">
+              Co-Scholastic Areas (All Terms)
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject Name</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 1</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 2</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 3</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Annual Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creditSubjects.map((sub) => {
+                  const g1 = summaryGrades["Term 1"]?.[sub.name] || student.grades[sub.name] || "—";
+                  const g2 = summaryGrades["Term 2"]?.[sub.name] || "—";
+                  const g3 = summaryGrades["Term 3"]?.[sub.name] || "—";
+                  // Annual grade = best (most recent non-empty) or last term if available
+                  const annual = [g3, g2, g1].find((g) => g && g !== "—") || "—";
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{g3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-black">{annual}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
         /* Two-column subjects layout */
