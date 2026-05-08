@@ -34,7 +34,7 @@ interface ResultCardProps {
   onTermChange?: (term: string) => void;
 }
 
-const TERMS = ["Term 1", "Term 2", "Term 3"];
+const TERMS = ["Term 1", "Term 2", "Term 3", "Result Summary"];
 
 const getOverallGrade = (pct: number): string => {
   if (pct >= 90) return "A+";
