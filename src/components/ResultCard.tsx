@@ -159,7 +159,63 @@ const ResultCard = ({
           <div className="shrink-0"><span className="text-primary">Term: </span><span className="font-black uppercase">{activeTerm}</span></div>
         </div>
 
-        {/* Two-column subjects layout */}
+        {activeTerm === "Result Summary" ? (
+          <div>
+            <h3 className="font-bold text-primary text-[11px] mb-1 uppercase">
+              Annual Result Summary (All Terms Consolidated)
+            </h3>
+            <table className="w-full border border-primary text-[10px]">
+              <thead>
+                <tr className="bg-primary text-primary-foreground">
+                  <th className="border border-primary px-1 py-0.5 text-left">Subject Name</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 1</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 2</th>
+                  <th className="border border-primary px-1 py-0.5 w-16">Term 3</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Grand Total</th>
+                  <th className="border border-primary px-1 py-0.5 w-20">Annual Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regularSubjects.map((sub) => {
+                  const t1 = Number(summaryMarks["Term 1"]?.[sub.name]) || 0;
+                  const t2 = Number(summaryMarks["Term 2"]?.[sub.name]) || 0;
+                  const t3 = Number(summaryMarks["Term 3"]?.[sub.name]) || 0;
+                  const grand = t1 + t2 + t3;
+                  const subjPct = (grand / (MAX_MARKS * 3)) * 100;
+                  return (
+                    <tr key={sub.name}>
+                      <td className="border border-primary px-1 py-0.5 uppercase">{sub.name}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-bold">{grand}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center font-black">{getOverallGrade(subjPct)}</td>
+                    </tr>
+                  );
+                })}
+                {(() => {
+                  const sum = (term: string) =>
+                    regularSubjects.reduce((a, s) => a + (Number(summaryMarks[term]?.[s.name]) || 0), 0);
+                  const t1 = sum("Term 1"), t2 = sum("Term 2"), t3 = sum("Term 3");
+                  const grand = t1 + t2 + t3;
+                  const maxAll = MAX_MARKS * regularSubjects.length * 3;
+                  const annualPct = maxAll > 0 ? (grand / maxAll) * 100 : 0;
+                  return (
+                    <tr className="font-black bg-primary/10">
+                      <td className="border border-primary px-1 py-0.5">GRAND TOTAL</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t1}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t2}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{t3}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{grand}/{maxAll}</td>
+                      <td className="border border-primary px-1 py-0.5 text-center">{getOverallGrade(annualPct)} ({annualPct.toFixed(1)}%)</td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+        /* Two-column subjects layout */
         <div className="grid grid-cols-2 gap-3">
           {/* Scholastic */}
           <div>
