@@ -105,8 +105,11 @@ const Dashboard = ({ onLogout, userEmail, isAdmin, userMobile, onChangePassword 
           </div>
         )}
 
+        {/* ADMIN DASHBOARD */}
+        {mode === "admin" && <AdminDashboard userMobile={userMobile} />}
+
         {/* SELECT CLASS / TERM (used by both Enter & Print) */}
-        {mode !== "home" && (
+        {(mode === "enter" || mode === "print") && (
           <div className="bg-card p-8 rounded-xl shadow-md border border-primary/10">
             <h2 className="text-xl font-bold text-primary mb-6">
               {mode === "enter" ? "✏️ Enter Marks" : "🖨️ Print Result Cards"}
@@ -164,7 +167,7 @@ const Dashboard = ({ onLogout, userEmail, isAdmin, userMobile, onChangePassword 
           </div>
         )}
 
-        {showEntry && mode !== "home" && (
+        {showEntry && (mode === "enter" || mode === "print") && (
           <MarksheetEntry
             selectedClass={selectedClass}
             selectedTerm={selectedTerm}
