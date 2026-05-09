@@ -119,6 +119,57 @@ export type Database = {
         }
         Relationships: []
       }
+      students: {
+        Row: {
+          address: string | null
+          class_name: string
+          contact: string | null
+          created_at: string
+          division: string | null
+          dob: string | null
+          exam_year: string | null
+          gender: string | null
+          gr_no: string
+          id: string
+          name: string
+          parent_name: string | null
+          roll_no: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          class_name: string
+          contact?: string | null
+          created_at?: string
+          division?: string | null
+          dob?: string | null
+          exam_year?: string | null
+          gender?: string | null
+          gr_no: string
+          id?: string
+          name: string
+          parent_name?: string | null
+          roll_no?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          class_name?: string
+          contact?: string | null
+          created_at?: string
+          division?: string | null
+          dob?: string | null
+          exam_year?: string | null
+          gender?: string | null
+          gr_no?: string
+          id?: string
+          name?: string
+          parent_name?: string | null
+          roll_no?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       teachers: {
         Row: {
           classes: string
